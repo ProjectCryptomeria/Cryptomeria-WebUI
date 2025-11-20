@@ -1,37 +1,45 @@
-import React, { useState, useRef } from 'react';
-import { AppLayer, UserAccount, ExperimentResult, ActiveExperimentState, ExperimentConfig, ExperimentScenario } from './types';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { AppLayer, UserAccount, SystemAccount, ExperimentResult, ActiveExperimentState, ExperimentConfig, ExperimentScenario, Toast, NotificationItem } from './types';
 import { NAV_ITEMS } from './constants';
-import { generateMockUsers, generateMockResults, generateMockScenarios } from './services/mockData';
+import { generateMockUsers, generateMockResults, generateMockScenarios, generateSystemAccounts } from './services/mockData';
 import MonitoringLayer from './layers/MonitoringLayer';
 import DeploymentLayer from './layers/DeploymentLayer';
 import EconomyLayer from './layers/EconomyLayer';
 import ExperimentLayer from './layers/ExperimentLayer';
 import LibraryLayer from './layers/LibraryLayer';
-import { LayoutDashboard, Bell, CheckCircle, AlertTriangle, X } from 'lucide-react';
-
-// Toast Notification Type
-interface Toast {
-  id: string;
-  type: 'success' | 'error';
-  title: string;
-  message: string;
-}
+import { LayoutDashboard, Bell, CheckCircle, AlertTriangle, X, Trash2, Info } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
+  // --- Global State: Infrastructure ---
+  const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5);
+  const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);
+
   // --- Global State: Economy ---
   const [users, setUsers] = useState<UserAccount[]>(generateMockUsers());
+  const [systemAccounts, setSystemAccounts] = useState<SystemAccount[]>(generateSystemAccounts(5));
+
+  // Sync System Accounts (Relayers) with Deployed Nodes
+  useEffect(() => {
+      setSystemAccounts(prev => {
+          const millionaire = prev.find(a => a.type === 'faucet_source');
+          // Re-generate relayers based on current count
+          const newAccounts = generateSystemAccounts(deployedNodeCount);
+          if (millionaire) {
+              // Preserve millionaire balance
+              newAccounts[0].balance = millionaire.balance;
+          }
+          return newAccounts;
+      });
+  }, [deployedNodeCount]);
 
   // --- Global State: Library ---
   const [results, setResults] = useState<ExperimentResult[]>(generateMockResults());
 
   // --- Global State: Scenarios ---
   const [scenarios, setScenarios] = useState<ExperimentScenario[]>(generateMockScenarios());
-
-  // --- Global State: Infrastructure ---
-  const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5);
-  const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);
 
   // --- Global State: Active Experiment ---
   const [experimentState, setExperimentState] = useState<ActiveExperimentState>({
@@ -46,15 +54,55 @@ const App: React.FC = () => {
   // Experiment Logic Ref (to hold interval ID)
   const experimentInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // --- Global State: Toast Notifications ---
+  // --- Global State: Notifications & Toasts ---
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+              setIsNotificationOpen(false);
+          }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const addToast = (type: 'success' | 'error', title: string, message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, type, title, message }]);
+    const newNotification: NotificationItem = {
+        id, 
+        type, 
+        title, 
+        message, 
+        timestamp: Date.now(),
+        read: false 
+    };
+
+    // 1. Add to Notification History
+    setNotifications(prev => [newNotification, ...prev]);
+
+    // 2. Add to Active Toasts (Limit to 3)
+    setToasts(prev => {
+        const updated = [...prev, { id, type, title, message }];
+        if (updated.length > 3) {
+            // Keep only the last 3 elements
+            return updated.slice(updated.length - 3);
+        }
+        return updated;
+    });
+
+    // Auto-remove from screen after 5 seconds
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
+  };
+
+  const clearNotifications = () => {
+      setNotifications([]);
   };
 
   // --- Handlers ---
@@ -62,15 +110,42 @@ const App: React.FC = () => {
   const handleCreateUser = () => {
     const newUser: UserAccount = {
       id: `u${Date.now()}`,
-      address: `raid1${Math.random().toString(36).substring(7)}...`,
+      address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)}`,
       balance: 0,
       role: 'client'
     };
     setUsers([...users, newUser]);
   };
 
-  const handleFaucet = (id: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, balance: u.balance + 1000 } : u));
+  const handleFaucet = (targetId: string) => {
+    const amount = 1000;
+    const millionaire = systemAccounts.find(a => a.type === 'faucet_source');
+    
+    if (!millionaire) return;
+    if (millionaire.balance < amount) {
+        addToast('error', 'Faucetエラー', 'Millionaireアカウントの資金が枯渇しています。');
+        return;
+    }
+
+    // Check if target is User
+    const userTarget = users.find(u => u.id === targetId);
+    if (userTarget) {
+        setUsers(users.map(u => u.id === targetId ? { ...u, balance: u.balance + amount } : u));
+        setSystemAccounts(prev => prev.map(a => a.id === millionaire.id ? { ...a, balance: a.balance - amount } : a));
+        addToast('success', '送金成功', `${userTarget.address.substring(0,8)}... へ 1,000 TKN を送金しました。`);
+        return;
+    }
+
+    // Check if target is System Account (Relayer)
+    const sysTarget = systemAccounts.find(a => a.id === targetId);
+    if (sysTarget) {
+        setSystemAccounts(prev => prev.map(a => {
+            if (a.id === millionaire.id) return { ...a, balance: a.balance - amount };
+            if (a.id === targetId) return { ...a, balance: a.balance + amount };
+            return a;
+        }));
+        addToast('success', '補充成功', `${sysTarget.name} へ 1,000 TKN を補充しました。`);
+    }
   };
 
   const handleDeleteUser = (id: string) => {
@@ -153,7 +228,7 @@ const App: React.FC = () => {
           statusMessage: "エラー: 実験が中断されました",
         }));
 
-        // Fail Cost Logic (Partial refund maybe? Let's keep it simple: minimal refund on fail)
+        // Fail Cost Logic
         const actualCost = Math.floor(estimatedCost * 0.8); // Consumed 80% before fail
         const refund = estimatedCost - actualCost;
         
@@ -254,6 +329,7 @@ const App: React.FC = () => {
       case AppLayer.ECONOMY: 
         return <EconomyLayer 
           users={users} 
+          systemAccounts={systemAccounts}
           onCreateUser={handleCreateUser} 
           onDeleteUser={handleDeleteUser} 
           onFaucet={handleFaucet} 
@@ -278,12 +354,12 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden relative">
       
-      {/* Toast Notifications Container */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
+      {/* Active Toasts Container (Max 3) */}
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map(toast => (
           <div 
             key={toast.id} 
-            className={`flex items-start gap-3 p-4 rounded-lg shadow-xl border transition-all duration-500 transform translate-x-0 ${
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-lg shadow-xl border transition-all duration-500 animate-in fade-in slide-in-from-top-2 ${
               toast.type === 'success' 
                 ? 'bg-white border-l-4 border-l-emerald-500 text-slate-800' 
                 : 'bg-white border-l-4 border-l-red-500 text-slate-800'
@@ -369,10 +445,62 @@ const App: React.FC = () => {
                     <span className="text-xs font-bold text-blue-700">実験実行中... {experimentState.progress}%</span>
                  </div>
               )}
-              <button className="relative p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-slate-50">
-                 <Bell className="w-5 h-5" />
-                 {toasts.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
-              </button>
+              
+              {/* Notification Bell Area */}
+              <div className="relative" ref={notificationRef}>
+                  <button 
+                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                    className={`relative p-2 transition-colors rounded-full hover:bg-slate-100 ${isNotificationOpen ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600'}`}
+                  >
+                     <Bell className="w-5 h-5" />
+                     {notifications.length > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                     )}
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  {isNotificationOpen && (
+                      <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
+                          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                              <h3 className="font-bold text-slate-700 text-sm">通知センター</h3>
+                              {notifications.length > 0 && (
+                                  <button onClick={clearNotifications} className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1">
+                                      <Trash2 className="w-3 h-3" />
+                                      すべて消去
+                                  </button>
+                              )}
+                          </div>
+                          <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                              {notifications.length === 0 ? (
+                                  <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center">
+                                      <Bell className="w-8 h-8 mb-2 opacity-20" />
+                                      通知はありません
+                                  </div>
+                              ) : (
+                                  <div className="divide-y divide-slate-100">
+                                      {notifications.map((notif) => (
+                                          <div key={notif.timestamp + notif.id} className="p-3 hover:bg-slate-50 transition-colors">
+                                              <div className="flex items-start gap-3">
+                                                  <div className={`mt-1 p-1 rounded-full ${notif.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                                      {notif.type === 'success' ? <CheckCircle className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                                                  </div>
+                                                  <div>
+                                                      <h4 className="text-sm font-bold text-slate-800">{notif.title}</h4>
+                                                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notif.message}</p>
+                                                      <div className="text-[10px] text-slate-400 mt-1 text-right">
+                                                          {new Date(notif.timestamp).toLocaleTimeString('ja-JP')}
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  )}
+              </div>
+
            </div>
         </header>
 

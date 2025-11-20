@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { AllocatorStrategy, TransmitterStrategy, ActiveExperimentState, ExperimentConfig, UserAccount, ExperimentScenario } from '../types';
-import { Play, Save, Calculator, Settings2, FileText, X, Upload, User, AlertTriangle } from 'lucide-react';
+import { Play, Save, Calculator, Settings2, FileText, X, Upload, User, AlertTriangle, Lock } from 'lucide-react';
 
 interface ExperimentLayerProps {
     activeExperiment: ActiveExperimentState;
@@ -34,6 +35,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
   // Simulation State
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
   const [isSimulationValid, setIsSimulationValid] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null); // New: Separate error state
 
   // Logs View State
   const [showLogs, setShowLogs] = useState(false);
@@ -49,6 +51,8 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
   // Reset simulation validity when config changes
   useEffect(() => {
       setIsSimulationValid(false);
+      setBalanceError(null); // Clear balance error on config change
+      // Do not reset estimatedCost to 0 visualy, but it's effectively invalid
   }, [allocator, transmitter, uploadType, selectedUserId, targetChains, sizeMB, chunkSizeKB, files, shouldFail]);
 
   // Auto-scroll logs
@@ -63,6 +67,18 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
       if (next.has(chain)) next.delete(chain);
       else next.add(chain);
       setTargetChains(next);
+  };
+
+  const handleSelectAllTargets = () => {
+      const all = new Set<string>();
+      for(let i=0; i<deployedNodeCount; i++) {
+          all.add(`datachain-${i}`);
+      }
+      setTargetChains(all);
+  };
+
+  const handleDeselectAllTargets = () => {
+      setTargetChains(new Set());
   };
 
   const calculateCost = () => {
@@ -97,13 +113,16 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
       
       if (user.balance < cost) {
           // Show the cost but warn and keep invalid
-          notify('error', '残高不足', `アカウント残高が足りません。(必要: ${cost.toLocaleString()} TKN, 現在: ${user.balance.toLocaleString()} TKN)`);
+          const errorMsg = `アカウント残高が足りません。(必要: ${cost.toLocaleString()} TKN, 現在: ${user.balance.toLocaleString()} TKN)`;
+          setBalanceError(errorMsg);
+          notify('error', '残高不足', errorMsg);
           setIsSimulationValid(false);
           return;
       }
 
       notify('success', '試算完了', `コスト試算が完了しました。実験を開始できます。`);
       setIsSimulationValid(true);
+      setBalanceError(null);
   };
 
   const handleRun = () => {
@@ -144,6 +163,8 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
 
   const handleLoadScenario = () => {
       if (!selectedLoadScenario) return;
+      if (activeExperiment.isRunning) return; // Guard
+
       const scenario = scenarios.find(s => s.id === selectedLoadScenario);
       if (!scenario) return;
 
@@ -169,6 +190,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
       
       // Reset simulation
       setIsSimulationValid(false);
+      setBalanceError(null);
 
       notify('success', '読み込み完了', `シナリオ "${scenario.name}" を設定に反映しました。`);
   };
@@ -260,7 +282,14 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
 
                     {/* Target Selection */}
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col">
-                        <label className="block text-sm font-medium text-slate-700 mb-3">ターゲットチェーン</label>
+                        <div className="flex justify-between items-center mb-2">
+                             <label className="block text-sm font-medium text-slate-700">ターゲットチェーン</label>
+                             <div className="flex gap-2">
+                                 <button onClick={handleSelectAllTargets} className="text-[10px] text-blue-600 hover:underline cursor-pointer">全て選択</button>
+                                 <span className="text-slate-300 text-[10px]">|</span>
+                                 <button onClick={handleDeselectAllTargets} className="text-[10px] text-slate-500 hover:underline cursor-pointer">選択を外す</button>
+                             </div>
+                        </div>
                         {deployedNodeCount > 0 ? (
                             <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[180px]">
                                 {Array.from({length: deployedNodeCount}, (_, i) => i).map(i => {
@@ -427,9 +456,17 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
                     </div>
                 )}
                 
-                {!isSimulationValid && estimatedCost > 0 && (
+                {/* Balance Error Message */}
+                {balanceError && (
                      <div className="mb-4 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-100">
-                        ※ 残高不足のため実験を開始できません
+                        ※ {balanceError}
+                     </div>
+                )}
+
+                {/* Settings Changed Warning (Not an error, just prompt to re-simulate) */}
+                {!isSimulationValid && !balanceError && (
+                     <div className="mb-4 text-xs text-slate-500 bg-slate-200 p-2 rounded border border-slate-300">
+                        ※ 設定が変更されました。再試算を行ってください。
                      </div>
                 )}
                 
@@ -475,13 +512,17 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
                     </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100">
-                    <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">シナリオ読み込み</label>
+                <div className={`pt-4 border-t border-slate-100 transition-opacity ${activeExperiment.isRunning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                    <label className="text-xs font-bold text-slate-400 uppercase mb-2 block flex justify-between">
+                        シナリオ読み込み
+                        {activeExperiment.isRunning && <Lock className="w-3 h-3 text-slate-400" />}
+                    </label>
                     <div className="flex gap-2">
                         <select 
                             value={selectedLoadScenario}
                             onChange={(e) => setSelectedLoadScenario(e.target.value)}
-                            className="flex-1 p-2 text-sm border border-slate-200 rounded bg-slate-50 outline-none focus:border-blue-400"
+                            disabled={activeExperiment.isRunning}
+                            className="flex-1 p-2 text-sm border border-slate-200 rounded bg-slate-50 outline-none focus:border-blue-400 disabled:cursor-not-allowed"
                         >
                             <option value="">-- 選択 --</option>
                             {scenarios.map(s => (
@@ -490,7 +531,8 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ activeExperiment, use
                         </select>
                         <button 
                             onClick={handleLoadScenario}
-                            className="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-200 hover:bg-slate-200 text-sm font-medium whitespace-nowrap"
+                            disabled={activeExperiment.isRunning}
+                            className="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-200 hover:bg-slate-200 text-sm font-medium whitespace-nowrap disabled:cursor-not-allowed"
                         >
                             読み込み
                         </button>

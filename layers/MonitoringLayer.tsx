@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import TopologyGraph from '../components/TopologyGraph';
@@ -117,9 +118,9 @@ const MonitoringLayer: React.FC<MonitoringLayerProps> = ({ deployedNodeCount }) 
                         <td className="px-6 py-3 font-mono font-medium text-slate-700">{node.id}</td>
                         <td className="px-6 py-3">
                             <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                node.type === 'control' ? 'bg-purple-100 text-purple-700' :
-                                node.type === 'meta' ? 'bg-indigo-100 text-indigo-700' :
-                                'bg-slate-100 text-slate-700'
+                                node.type === 'control' ? 'bg-blue-100 text-blue-700' :
+                                node.type === 'meta' ? 'bg-purple-100 text-purple-700' :
+                                'bg-emerald-100 text-emerald-700'
                             }`}>
                                 {node.type.toUpperCase()}
                             </span>

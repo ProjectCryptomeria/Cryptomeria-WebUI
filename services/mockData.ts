@@ -1,4 +1,4 @@
-import { ExperimentResult, NodeStatus, UserAccount, ExperimentScenario, AllocatorStrategy, TransmitterStrategy } from '../types';
+import { ExperimentResult, NodeStatus, UserAccount, SystemAccount, ExperimentScenario, AllocatorStrategy, TransmitterStrategy } from '../types';
 
 // Mock Nodes for Monitoring
 export const generateMockNodes = (count: number): NodeStatus[] => {
@@ -26,6 +26,23 @@ export const generateMockUsers = (): UserAccount[] => [
   { id: 'u2', address: 'raid1k2...99z', balance: 120, role: 'client' },
   { id: 'u3', address: 'raid1p4...m2x', balance: 0, role: 'client' },
 ];
+
+// Mock System Accounts
+export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] => {
+    const accounts: SystemAccount[] = [
+        { id: 'sys-millionaire', name: 'Millionaire (Pool)', address: 'raid1_genesis_pool_inf', balance: 1000000000, type: 'faucet_source' }
+    ];
+    for(let i=0; i<dataChainCount; i++) {
+        accounts.push({
+            id: `sys-relayer-${i}`,
+            name: `Relayer (Chain-${i})`,
+            address: `raid1_relayer_ch${i}_addr`,
+            balance: 50, // Low balance initially
+            type: 'relayer'
+        });
+    }
+    return accounts;
+}
 
 // Mock Scenarios
 export const generateMockScenarios = (): ExperimentScenario[] => [

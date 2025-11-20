@@ -12,29 +12,36 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
   const dataNodes = nodes.filter(n => n.type === 'data');
 
   // Layout Constants
-  const width = 1200;
+  const nodeSpacing = 160;
+  const baseWidth = 1200;
   const height = 600;
+  
+  // Calculate dynamic width based on the number of data nodes
+  // If nodes fit in 1200px, use 1200px. Otherwise expand to fit them + margins.
+  const canvasWidth = useMemo(() => {
+      const requiredWidth = dataNodes.length * nodeSpacing + 200; // 200 for margins
+      return Math.max(baseWidth, requiredWidth);
+  }, [dataNodes.length]);
   
   // Node Positions based on Data Flow Logic:
   // 1. Control Chain (Top Center) - The orchestrator
-  const controlPos = { x: width / 2 - 100, y: 80 };
+  const controlPos = { x: canvasWidth / 2, y: 80 }; // Center horizontally based on dynamic width
 
-  // 2. Meta Chain (Top Right / Side) - Stores manifests from Control
-  const metaPos = { x: width / 2 + 150, y: 100 };
+  // 2. Meta Chain (Top Right relative to Control)
+  const metaPos = { x: canvasWidth / 2 + 250, y: 100 };
   
   // 3. Data Chains (Bottom Row) - Receives fragments from Control
   const dataNodePositions = useMemo(() => {
     const count = dataNodes.length;
-    const spacing = 160;
-    const totalWidth = (count - 1) * spacing;
-    const startX = width / 2 - totalWidth / 2;
+    const totalWidth = (count - 1) * nodeSpacing;
+    const startX = canvasWidth / 2 - totalWidth / 2;
     
     return dataNodes.map((node, i) => ({
         ...node,
-        x: startX + i * spacing,
+        x: startX + i * nodeSpacing,
         y: 500
     }));
-  }, [dataNodes, width]);
+  }, [dataNodes, canvasWidth]);
 
   // Helper to draw orthogonal lines (Manhattan style)
   const drawOrthogonalLine = (x1: number, y1: number, x2: number, y2: number, midYRatio: number = 0.5) => {
@@ -56,7 +63,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
       
       <div className="w-full h-full overflow-auto">
         <svg 
-            viewBox={`0 0 ${width} ${height}`} 
+            viewBox={`0 0 ${canvasWidth} ${height}`} 
             className="w-full h-auto min-h-[500px] select-none"
             preserveAspectRatio="xMidYMid meet"
         >
@@ -79,7 +86,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
             {dataNodePositions.map((dn, i) => (
                 <g key={`link-control-data-${dn.id}`}>
                     <path 
-                        d={drawOrthogonalLine(controlPos.x, controlPos.y + 40, dn.x, dn.y - 45, 0.4 + (i % 2) * 0.1)} 
+                        d={drawOrthogonalLine(controlPos.x, controlPos.y + 50, dn.x, dn.y - 45, 0.4 + (i % 2) * 0.1)} 
                         fill="none"
                         stroke="#334155"
                         strokeWidth="2"
@@ -91,7 +98,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                            <animateMotion 
                              dur={`${2 + Math.random()}s`} 
                              repeatCount="indefinite"
-                             path={drawOrthogonalLine(controlPos.x, controlPos.y + 40, dn.x, dn.y - 45, 0.4 + (i % 2) * 0.1)}
+                             path={drawOrthogonalLine(controlPos.x, controlPos.y + 50, dn.x, dn.y - 45, 0.4 + (i % 2) * 0.1)}
                              keyPoints="0;1"
                              keyTimes="0;1"
                              calcMode="linear"
@@ -104,7 +111,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
             {/* 2. Control -> Meta (Writing Manifest) */}
             <g>
                 <path 
-                    d={drawDirectLine(controlPos.x + 40, controlPos.y, metaPos.x - 40, metaPos.y)}
+                    d={drawDirectLine(controlPos.x + 60, controlPos.y, metaPos.x - 50, metaPos.y)}
                     fill="none"
                     stroke="#6366f1"
                     strokeWidth="3"
@@ -114,7 +121,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                     <animateMotion 
                          dur="3s" 
                          repeatCount="indefinite"
-                         path={drawDirectLine(controlPos.x + 40, controlPos.y, metaPos.x - 40, metaPos.y)}
+                         path={drawDirectLine(controlPos.x + 60, controlPos.y, metaPos.x - 50, metaPos.y)}
                     />
                  </circle>
             </g>

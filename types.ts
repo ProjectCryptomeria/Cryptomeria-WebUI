@@ -1,3 +1,4 @@
+
 // Layer identifiers
 export enum AppLayer {
   MONITORING = 'monitoring',
@@ -30,6 +31,14 @@ export interface UserAccount {
   address: string;
   balance: number;
   role: 'admin' | 'client';
+}
+
+export interface SystemAccount {
+  id: string;
+  name: string; // "Millionaire", "Relayer-0"
+  address: string;
+  balance: number;
+  type: 'faucet_source' | 'relayer';
 }
 
 // Experiment Types
@@ -100,4 +109,29 @@ export interface ExperimentResult {
   
   // Logs snapshot
   logs?: string[];
+}
+
+export type SortDirection = 'asc' | 'desc';
+export interface SortConfig {
+  key: keyof ExperimentResult;
+  direction: SortDirection;
+}
+
+export interface FilterCondition {
+  key: keyof ExperimentResult;
+  value: string;
+  label: string; // Display name for the badge
+}
+
+// Notifications
+export interface Toast {
+  id: string;
+  type: 'success' | 'error';
+  title: string;
+  message: string;
+}
+
+export interface NotificationItem extends Toast {
+  timestamp: number;
+  read: boolean;
 }
