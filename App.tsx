@@ -275,37 +275,11 @@ const App: React.FC = () => {
         {/* Content Area */}
         <main className="flex-1 bg-slate-50/50 relative overflow-hidden">
             
-            {/* Layer Render */}
-            <div className="h-full w-full p-8 overflow-y-auto custom-scrollbar">
-                <div className="max-w-[1600px] mx-auto h-full">
+            {/* Group 1: Full Screen & Self-Managed Layouts (Monitoring, Experiment) */}
+            {/* These layers handle their own scrolling and layout, so we remove parent padding/scroll to prevent issues */}
+            {(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
+                 <div className="absolute inset-0 overflow-hidden">
                     {activeLayer === AppLayer.MONITORING && <MonitoringLayer deployedNodeCount={deployedNodeCount} />}
-                    
-                    {activeLayer === AppLayer.DEPLOYMENT && (
-                        <DeploymentLayer 
-                            setDeployedNodeCount={setDeployedNodeCount} 
-                            deployedNodeCount={deployedNodeCount}
-                            setIsDockerBuilt={setIsDockerBuilt}
-                            isDockerBuilt={isDockerBuilt}
-                        />
-                    )}
-                    
-                    {activeLayer === AppLayer.ECONOMY && (
-                        <EconomyLayer 
-                            users={users} 
-                            systemAccounts={systemAccounts} 
-                            onCreateUser={handleCreateUser} 
-                            onDeleteUser={handleDeleteUser}
-                            onFaucet={handleFaucet}
-                        />
-                    )}
-
-                    {activeLayer === AppLayer.PRESET && (
-                        <PresetLayer 
-                            presets={presets}
-                            onDeletePreset={handleDeletePreset}
-                        />
-                    )}
-                    
                     {activeLayer === AppLayer.EXPERIMENT && (
                         <ExperimentLayer 
                             users={users}
@@ -314,12 +288,47 @@ const App: React.FC = () => {
                             onRegisterResult={handleRegisterResult}
                             onSavePreset={handleSavePreset}
                             notify={addToast}
+                            onDeletePreset={handleDeletePreset}
                         />
                     )}
-                    
-                    {activeLayer === AppLayer.LIBRARY && <LibraryLayer results={results} onDeleteResult={handleDeleteResult} />}
+                 </div>
+            )}
+
+            {/* Group 2: Dashboard Layouts (Deployment, Economy, Preset, Library) */}
+            {/* These need a container with standard padding and scrolling */}
+            {!(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
+                <div className="h-full w-full p-6 sm:p-8 overflow-y-auto custom-scrollbar bg-slate-50/50">
+                    <div className="max-w-[1600px] mx-auto min-h-full flex flex-col">
+                        {activeLayer === AppLayer.DEPLOYMENT && (
+                            <DeploymentLayer 
+                                setDeployedNodeCount={setDeployedNodeCount} 
+                                deployedNodeCount={deployedNodeCount}
+                                setIsDockerBuilt={setIsDockerBuilt}
+                                isDockerBuilt={isDockerBuilt}
+                            />
+                        )}
+                        
+                        {activeLayer === AppLayer.ECONOMY && (
+                            <EconomyLayer 
+                                users={users} 
+                                systemAccounts={systemAccounts} 
+                                onCreateUser={handleCreateUser} 
+                                onDeleteUser={handleDeleteUser}
+                                onFaucet={handleFaucet}
+                            />
+                        )}
+
+                        {activeLayer === AppLayer.PRESET && (
+                            <PresetLayer 
+                                presets={presets}
+                                onDeletePreset={handleDeletePreset}
+                            />
+                        )}
+                        
+                        {activeLayer === AppLayer.LIBRARY && <LibraryLayer results={results} onDeleteResult={handleDeleteResult} />}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Global Toasts */}
             <div className="fixed bottom-8 left-8 z-[100] flex flex-col gap-4 pointer-events-none w-80">
