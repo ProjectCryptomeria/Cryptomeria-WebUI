@@ -159,7 +159,7 @@ const DeploymentLayer: React.FC<DeploymentLayerProps> = ({ setDeployedNodeCount,
                     
                     {isDockerBuilt && (
                         <div className="animate-in fade-in slide-in-from-top-2">
-                            <Badge color="green" className="w-full justify-center py-2 text-xs">
+                            <Badge color="green" className="w-full flex items-center justify-center py-2 text-xs">
                                 <CheckCircle2 className="w-3 h-3 mr-1.5" /> Built: raidchain/node:latest
                             </Badge>
                         </div>

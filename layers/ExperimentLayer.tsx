@@ -759,7 +759,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
                 {/* Results Panel (Fixed Bottom) */}
                 <div 
                     ref={panelRef}
-                    className={`absolute bottom-0 left-0 right-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 rounded-t-[2rem] border-t border-gray-100 flex flex-col bottom-panel-transition ${isResultsPanelOpen ? '' : 'h-14'}`} 
+                    className={`absolute bottom-0 left-0 right-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 rounded-t-[2rem] border-t border-gray-100 flex flex-col bottom-panel-transition ${isResultsPanelOpen ? '' : 'h-20'}`} 
                     style={{ height: isResultsPanelOpen ? panelHeight : undefined }}
                 >
                     {/* Resizer Handle */}

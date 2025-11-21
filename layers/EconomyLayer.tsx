@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserAccount, SystemAccount } from '../types';
 import { Wallet, Plus, ShieldCheck, Key, History, Trash2, Server, Coins, ChevronDown, ChevronUp, Copy, AlertTriangle, Eye } from 'lucide-react';
@@ -89,8 +90,8 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
         </Modal>
 
         {/* Top Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-white to-blue-50/50 border-blue-100">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-white to-blue-50/50 border-blue-100 lg:col-span-1 h-full">
                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3 text-slate-700">
                         <div className="p-2 bg-white rounded-lg shadow-sm border border-blue-100 text-blue-500"><ShieldCheck className="w-5 h-5" /></div>
@@ -101,7 +102,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
                     </label>
                 </div>
-                <div className="text-xs text-slate-500 leading-relaxed font-medium">
+                <div className="text-xs text-slate-500 leading-relaxed font-medium mt-4">
                     {watchdogEnabled ? 
                         <span className="text-emerald-600 flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> 監視中: 残高不足時に自動でFaucetを実行します。</span> : 
                         <span className="text-slate-400">機能停止中: ガス欠により停止するリスクがあります。</span>
@@ -109,20 +110,23 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
                 </div>
             </Card>
 
-             <Card className="p-6 flex flex-col justify-between bg-slate-50/80">
-                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-2"><History className="w-4 h-4" />Watchdog Activity</h4>
-                 <div className="space-y-3">
+             <Card className="p-6 flex flex-col bg-slate-50/80 lg:col-span-2 h-full">
+                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-4"><History className="w-4 h-4" />Watchdog Activity</h4>
+                 <div className="space-y-3 overflow-y-auto h-24 custom-scrollbar pr-2">
                     <div className="text-[10px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex items-start gap-2">
                         <span className="text-emerald-500 mt-0.5">➜</span>
                         <span>[10:42] Relayer (Chain-0) low balance. Auto-faucet executed (+100 TKN).</span>
                     </div>
+                    <div className="text-[10px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex items-start gap-2">
+                        <span className="text-slate-400 mt-0.5">➜</span>
+                        <span>[10:30] Watchdog service started. Monitoring 5 relayers.</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex items-start gap-2">
+                        <span className="text-slate-400 mt-0.5">➜</span>
+                        <span>[09:15] System health check passed. All balances sufficient.</span>
+                    </div>
                 </div>
              </Card>
-
-             <Card className="p-6 flex flex-col justify-center items-center text-center bg-slate-50/50 border-dashed border-2 border-slate-200 hover:border-blue-300 transition-colors group cursor-pointer" onClick={onCreateUser}>
-                <div className="w-12 h-12 bg-white text-blue-500 rounded-full flex items-center justify-center mb-3 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div>
-                <div className="font-bold text-slate-600 text-sm group-hover:text-blue-600">Add New Wallet</div>
-            </Card>
         </div>
 
         {/* Users List */}
