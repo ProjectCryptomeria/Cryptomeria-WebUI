@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { UserAccount, SystemAccount } from '../types';
-import { Wallet, Plus, ShieldCheck, Key, History, Trash2, Server, Coins, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { Wallet, Plus, ShieldCheck, Key, History, Trash2, Server, Coins, ChevronDown, ChevronUp, Copy, AlertTriangle } from 'lucide-react';
 import { Card, Modal, ModalHeader } from '../components/Shared';
 
 interface EconomyLayerProps {
@@ -17,9 +17,19 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
   const [isSystemExpanded, setIsSystemExpanded] = useState(true);
   const [isUsersExpanded, setIsUsersExpanded] = useState(true);
   const [viewPrivateKeyUser, setViewPrivateKeyUser] = useState<UserAccount | null>(null);
+  
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const confirmDelete = () => {
+      if (deleteConfirmId) {
+          onDeleteUser(deleteConfirmId);
+          setDeleteConfirmId(null);
+      }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+        {/* Private Key Modal */}
         <Modal isOpen={!!viewPrivateKeyUser} onClose={() => setViewPrivateKeyUser(null)} className="w-full max-w-lg p-6">
              <ModalHeader title="秘密鍵 (Mnemonic) 表示" icon={Key} iconColor="text-orange-500" onClose={() => setViewPrivateKeyUser(null)} />
              <div className="mb-4">
@@ -37,6 +47,33 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
              <div className="mt-6 flex justify-end">
                  <button onClick={() => setViewPrivateKeyUser(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium text-sm transition-colors">閉じる</button>
              </div>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} className="max-w-sm w-full p-6">
+            <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">ユーザーを削除しますか？</h3>
+                <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                    このアカウントに関連する残高情報は失われます。
+                </p>
+                <div className="flex gap-3 w-full">
+                    <button 
+                        onClick={() => setDeleteConfirmId(null)}
+                        className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                    >
+                        キャンセル
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm shadow-red-200"
+                    >
+                        削除
+                    </button>
+                </div>
+            </div>
         </Modal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -111,7 +148,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({ users, systemAccounts, onCr
                                     <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 whitespace-nowrap">{user.balance.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-right flex justify-end gap-2 whitespace-nowrap">
                                         <button onClick={() => onFaucet(user.id)} className="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded font-medium border border-emerald-200 transition-colors">+ Faucet</button>
-                                        <button onClick={() => window.confirm('削除しますか？') && onDeleteUser(user.id)} className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1.5 rounded font-medium border border-red-200 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                        <button onClick={() => setDeleteConfirmId(user.id)} className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1.5 rounded font-medium border border-red-200 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                     </td>
                                 </tr>
                             ))}

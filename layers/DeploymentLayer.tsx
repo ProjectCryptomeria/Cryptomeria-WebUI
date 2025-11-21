@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Trash2, Layers, CheckCircle2, Server, AlertTriangle } from 'lucide-react';
 import { MOCK_INITIAL_LOGS } from '../constants';
-import { Card, LogViewer, Badge } from '../components/Shared';
+import { Card, LogViewer, Badge, Modal } from '../components/Shared';
 
 interface DeploymentLayerProps {
     setDeployedNodeCount: (count: number) => void;
@@ -16,6 +16,8 @@ const DeploymentLayer: React.FC<DeploymentLayerProps> = ({ setDeployedNodeCount,
   const [isBuilding, setIsBuilding] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [logs, setLogs] = useState<string[]>(MOCK_INITIAL_LOGS);
+  
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => { setScaleCount(deployedNodeCount); }, [deployedNodeCount]);
 
@@ -57,13 +59,44 @@ const DeploymentLayer: React.FC<DeploymentLayerProps> = ({ setDeployedNodeCount,
   };
 
   const handleReset = () => {
-      if(!window.confirm("本当に環境を全削除しますか？\n(PVCを含むすべてのデータが破棄されます)")) return;
+      setShowResetConfirm(true);
+  };
+
+  const confirmReset = () => {
       setLogs([]); addLog(">> Executing Helm Uninstall..."); addLog("Removing PVCs..."); addLog("Cleaned up resources.");
       setIsDockerBuilt(false); setDeployedNodeCount(0);
+      setShowResetConfirm(false);
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)]">
+        {/* Reset Confirmation Modal */}
+        <Modal isOpen={showResetConfirm} onClose={() => setShowResetConfirm(false)} className="max-w-sm w-full p-6">
+            <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">環境を全削除しますか？</h3>
+                <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                    PVCを含むすべてのデータが破棄されます。<br/>この操作は取り消せません。
+                </p>
+                <div className="flex gap-3 w-full">
+                    <button 
+                        onClick={() => setShowResetConfirm(false)}
+                        className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                    >
+                        キャンセル
+                    </button>
+                    <button 
+                        onClick={confirmReset}
+                        className="flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm shadow-red-200"
+                    >
+                        リセット実行
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
       <div className="space-y-6">
         <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md relative overflow-hidden">
             <div className="flex items-center justify-between relative z-10">

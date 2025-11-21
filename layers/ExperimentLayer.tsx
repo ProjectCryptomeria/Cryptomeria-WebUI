@@ -515,7 +515,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
   const totalCost = scenarios.reduce((acc, cur) => acc + (cur.cost || 0), 0).toFixed(2);
 
   return (
-    <div className="flex h-full w-full overflow-hidden relative bg-gray-100 text-gray-800">
+    <div className="flex h-full w-full overflow-hidden relative text-gray-800">
         {/* Flex Container for Main Content and Sidebar */}
         <div className="flex w-full h-full relative">
             

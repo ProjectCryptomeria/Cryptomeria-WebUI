@@ -20,10 +20,24 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const handleSort = (key: keyof ExperimentResult) => setSortConfig(c => ({ key, direction: c.key === key && c.direction === 'desc' ? 'asc' : 'desc' }));
   const addFilter = (key: keyof ExperimentResult, value: string, labelPrefix: string) => { if (!filters.some(f => f.key === key && f.value === value)) { setFilters([...filters, { key, value, label: `${labelPrefix}: ${value}` }]); setIsFilterMenuOpen(false); }};
   const removeFilter = (index: number) => setFilters(filters.filter((_, i) => i !== index));
-  const handleDeleteSelected = () => { if (selectedResultId && window.confirm('完全に削除しますか？')) { onDeleteResult(selectedResultId); setSelectedResultId(null); }};
+  
+  const handleDeleteClick = () => {
+      if (selectedResultId) setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+      if (selectedResultId) {
+          onDeleteResult(selectedResultId);
+          setSelectedResultId(null);
+          setShowDeleteConfirm(false);
+      }
+  };
+
   const handleOpenExport = () => { if (!selectedResultId) return; const r = results.find(x => x.id === selectedResultId); if(r) { setExportFilename(`${r.id}-${new Date(r.executedAt).toISOString().replace(/[:.]/g, '-')}`); setIsExportModalOpen(true); }};
   
   const getExportContent = () => {
@@ -47,6 +61,33 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 relative h-full flex flex-col">
+        {/* Delete Confirmation Modal */}
+        <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} className="max-w-sm w-full p-6">
+            <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">完全に削除しますか？</h3>
+                <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                    この操作は取り消せません。実験結果ログは完全に削除されます。
+                </p>
+                <div className="flex gap-3 w-full">
+                    <button 
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                    >
+                        キャンセル
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm shadow-red-200"
+                    >
+                        削除
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} className="max-w-lg w-full p-6">
             <ModalHeader title="データエクスポート" icon={Download} iconColor="text-blue-600" onClose={() => setIsExportModalOpen(false)} />
             <div className="space-y-4">
@@ -153,7 +194,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
                 <div className="flex gap-2 relative">
                     <button onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)} className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"><Filter className="w-4 h-4" />フィルター</button>
                     {isFilterMenuOpen && <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-20 p-2 animate-in fade-in zoom-in-95 duration-200">{['SUCCESS', 'FAILED'].map(s => <button key={s} onClick={() => addFilter('status', s, 'Status')} className="w-full text-left px-2 py-1.5 text-sm hover:bg-slate-50 rounded transition-colors">{s}</button>)}</div>}
-                    {selectedResultId && <><button onClick={handleDeleteSelected} className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"><Trash2 className="w-4 h-4" />削除</button><button onClick={handleOpenExport} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"><Download className="w-4 h-4" />エクスポート</button></>}
+                    {selectedResultId && <><button onClick={handleDeleteClick} className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"><Trash2 className="w-4 h-4" />削除</button><button onClick={handleOpenExport} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"><Download className="w-4 h-4" />エクスポート</button></>}
                 </div>
             </div>
             {filters.length > 0 && <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">{filters.map((f, idx) => <Badge key={idx} color="blue" className="flex items-center gap-1">{f.label}<button onClick={() => removeFilter(idx)}><X className="w-3 h-3" /></button></Badge>)}<button onClick={() => setFilters([])} className="text-xs text-slate-400 underline hover:text-slate-600">クリア</button></div>}

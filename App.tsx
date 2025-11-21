@@ -362,10 +362,10 @@ const App: React.FC = () => {
                 {activeLayer === AppLayer.LIBRARY && <LibraryLayer results={results} onDeleteResult={handleDeleteResult} />}
             </div>
 
-            {/* Toast Overlay (トースト通知) */}
-            <div className="absolute bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+            {/* Toast Overlay (トースト通知) - Fixed at bottom left */}
+            <div className="fixed bottom-6 left-4 z-[60] flex flex-col gap-3 pointer-events-none w-60">
                 {toasts.map(toast => (
-                    <div key={toast.id} className="bg-white rounded-lg shadow-lg border border-slate-200 p-4 w-80 animate-in slide-in-from-right-10 fade-in duration-300 pointer-events-auto flex items-start gap-3">
+                    <div key={toast.id} className="bg-white rounded-lg shadow-xl border border-slate-200 p-4 w-full animate-in slide-in-from-left-10 fade-in duration-300 pointer-events-auto flex items-start gap-3">
                         <div className={`mt-0.5 ${toast.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
                             {toast.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                         </div>
