@@ -11,7 +11,7 @@ import LibraryLayer from './layers/LibraryLayer';
 import PresetLayer from './layers/PresetLayer';
 import { LayoutDashboard, Bell, CheckCircle, AlertTriangle, X, Info, ChevronRight } from 'lucide-react';
 import { useEconomyManagement, useNotification } from './hooks';
-import { mockApi } from './services/mockBackend';
+import { api } from './services/api';
 
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
@@ -27,7 +27,7 @@ const App: React.FC = () => {
   // For a full implementation, these should also be fetched from the backend
   const [results, setResults] = useState<ExperimentResult[]>([]);
   React.useEffect(() => {
-      mockApi.library.getResults().then(setResults);
+      api.library.getResults().then(setResults);
   }, [activeLayer]); // Refresh when switching tabs
 
   const [presets, setPresets] = useState<ExperimentPreset[]>(generateMockPresets());
@@ -49,7 +49,7 @@ const App: React.FC = () => {
 
   const handleDeletePreset = (id: string) => { setPresets(prev => prev.filter(s => s.id !== id)); addToast('success', 'Deleted', 'Preset removed.'); };
   const handleDeleteResult = (id: string) => { 
-      mockApi.library.deleteResult(id).then(() => {
+      api.library.deleteResult(id).then(() => {
           setResults(results.filter(r => r.id !== id)); 
           addToast('success', 'Deleted', 'Result log removed.'); 
       });

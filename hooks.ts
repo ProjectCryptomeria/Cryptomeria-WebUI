@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ExperimentScenario, ExperimentResult, NodeStatus, UserAccount, SystemAccount, FilterCondition, SortConfig, Toast, NotificationItem, AllocatorStrategy, TransmitterStrategy, MonitoringUpdate, PacketEvent, MempoolInfo } from './types';
-import { VirtualSocket, mockApi } from './services/mockBackend';
+import { VirtualSocket } from './services/mockBackend';
+import { api } from './services/api';
 
 // --- 0. useWebSocket ---
 export const useWebSocket = <T>(url: string, onMessage?: (data: T) => void) => {
@@ -177,7 +178,7 @@ export const useScenarioExecution = (
         notify('success', 'Job Queued', 'Scenarios sent to execution queue.');
         
         const readyScenarios = scenarios.filter(s => s.status === 'READY');
-        const res = await mockApi.experiment.run(readyScenarios);
+        const res = await api.experiment.run(readyScenarios);
         setExecutionId(res.executionId);
     };
 
@@ -223,7 +224,7 @@ export const useDeploymentControl = (
         if (isBuilding) return;
         setLogs([]);
         setIsBuilding(true);
-        const res = await mockApi.deployment.build();
+        const res = await api.deployment.build();
         setActiveJobId(res.jobId);
     };
 
@@ -231,7 +232,7 @@ export const useDeploymentControl = (
         if (isDeploying) return;
         setLogs(prev => [...prev, '>> Initiating Helm Upgrade...']);
         setIsDeploying(true);
-        await mockApi.deployment.scale(scaleCount);
+        await api.deployment.scale(scaleCount);
         // Note: In a real app we'd wait for pod ready via WS, here we assume API returns when accepted
         setDeployedNodeCount(scaleCount);
         setLogs(prev => [...prev, '>> Deployment request accepted.']);
@@ -240,7 +241,7 @@ export const useDeploymentControl = (
 
     const handleReset = async () => {
         setLogs([]);
-        await mockApi.deployment.reset();
+        await api.deployment.reset();
         setIsDockerBuilt(false);
         setDeployedNodeCount(0);
     };
@@ -257,7 +258,7 @@ export const useEconomyManagement = (
     const [systemAccounts, setSystemAccounts] = useState<SystemAccount[]>([]);
 
     const refresh = async () => {
-        const res = await mockApi.economy.getUsers();
+        const res = await api.economy.getUsers();
         setUsers(res.users);
         setSystemAccounts(res.system);
     };
@@ -265,20 +266,20 @@ export const useEconomyManagement = (
     useEffect(() => { refresh(); }, [deployedNodeCount]); // Refresh when infra changes (relayers might change)
 
     const handleCreateUser = async () => {
-        await mockApi.economy.createUser();
+        await api.economy.createUser();
         refresh();
         addToast('success', 'Created', 'New user account generated.');
     };
 
     const handleDeleteUser = async (id: string) => {
-        await mockApi.economy.deleteUser(id);
+        await api.economy.deleteUser(id);
         refresh();
         addToast('success', 'Deleted', 'User account removed.');
     };
 
     const handleFaucet = async (targetId: string) => {
         try {
-            const res = await mockApi.economy.faucet(targetId, 1000);
+            const res = await api.economy.faucet(targetId, 1000);
             refresh();
             addToast('success', 'Faucet', `Sent 1000 TKN to ${res.targetName}`);
         } catch (e) {

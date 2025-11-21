@@ -292,24 +292,4 @@ class MockServerInstance {
 
 export const MockServer = new MockServerInstance();
 
-// --- API Client (MockFetch) ---
-export const mockApi = {
-  deployment: {
-    build: () => MockServer.buildImage(),
-    scale: (count: number) => MockServer.scaleCluster(count),
-    reset: () => MockServer.scaleCluster(0),
-  },
-  economy: {
-    getUsers: () => MockServer.getUsers(),
-    createUser: () => MockServer.createUser(),
-    deleteUser: (id: string) => MockServer.deleteUser(id),
-    faucet: (id: string, amount: number) => MockServer.faucet(id, amount),
-  },
-  experiment: {
-    run: (scenarios: ExperimentScenario[]) => MockServer.runExperiment(scenarios),
-  },
-  library: {
-    getResults: () => MockServer.getResults(),
-    deleteResult: (id: string) => MockServer.deleteResult(id),
-  }
-};
+// Note: api client has been moved to services/api.ts to use fetch + MSW
