@@ -4,7 +4,7 @@ export enum AppLayer {
   MONITORING = 'monitoring',
   DEPLOYMENT = 'deployment',
   ECONOMY = 'economy',
-  SCENARIO = 'scenario', // Added Scenario Layer
+  PRESET = 'preset', // Changed from SCENARIO
   EXPERIMENT = 'experiment',
   LIBRARY = 'library',
 }
@@ -32,6 +32,7 @@ export interface UserAccount {
   address: string;
   balance: number;
   role: 'admin' | 'client';
+  name?: string;
 }
 
 export interface SystemAccount {
@@ -48,6 +49,7 @@ export enum AllocatorStrategy {
   ROUND_ROBIN = 'RoundRobin',
   RANDOM = 'Random',
   AVAILABLE = 'Available',
+  HASH = 'Hash',
 }
 
 export enum TransmitterStrategy {
@@ -77,22 +79,58 @@ export interface ExperimentConfig {
   shouldFail?: boolean; // For simulation
 }
 
-// Scenario Type for Saving/Loading
+// Updated Type: Scenario Status (formerly Condition Status)
+export type ScenarioStatus = 'PENDING' | 'CALCULATING' | 'READY' | 'RUNNING' | 'COMPLETE' | 'FAIL';
+
+// Updated Type: Experiment Scenario (formerly Experiment Condition)
+// This represents a single generated atomic experiment instance
 export interface ExperimentScenario {
+    id: number;
+    uniqueId: string;
+    
+    // Config params
+    dataSize: number;
+    chunkSize: number;
+    allocator: AllocatorStrategy;
+    transmitter: TransmitterStrategy;
+    chains: number; // Count of chains
+    targetChains: string[]; // Actual chain IDs
+    budgetLimit: number;
+    
+    // Results & State
+    cost: number;
+    status: ScenarioStatus;
+    failReason: string | null;
+    
+    // Execution State (Local to condition)
+    progress: number;
+    logs: string[];
+}
+
+// Updated Type: Experiment Preset (formerly Experiment Scenario)
+// This represents a saved configuration/template
+export interface ExperimentPreset {
   id: string;
   name: string;
-  config: ExperimentConfig;
+  config: ExperimentConfig; // Keep for compatibility
+  // Extended data for the new generator UI
+  generatorState?: {
+      projectName: string;
+      accountValue: string;
+      dataSize: { mode: 'fixed' | 'range', fixed: number, start: number, end: number, step: number };
+      chunkSize: { mode: 'fixed' | 'range', fixed: number, start: number, end: number, step: number };
+      allocators: AllocatorStrategy[];
+      transmitters: TransmitterStrategy[];
+      selectedChains: string[];
+      uploadType: 'Virtual' | 'Real';
+  };
   lastModified: string;
 }
 
-// Active Experiment State (Global)
+// Active Experiment State (Global - reduced usage now)
 export interface ActiveExperimentState {
     isRunning: boolean;
-    progress: number;
-    logs: string[];
     statusMessage: string;
-    config: ExperimentConfig | null;
-    startTime: number | null;
 }
 
 // Library Types

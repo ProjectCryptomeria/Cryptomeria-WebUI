@@ -21,9 +21,9 @@ export const NAV_ITEMS = [
     icon: Coins,
   },
   {
-    id: AppLayer.SCENARIO,
-    label: 'Scenarios',
-    subLabel: 'シナリオ管理',
+    id: AppLayer.PRESET, // Changed from SCENARIO
+    label: 'Presets',    // Changed Label
+    subLabel: 'プリセット管理', // Changed SubLabel
     icon: ScrollText,
   },
   {

@@ -1,14 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { AppLayer, UserAccount, SystemAccount, ExperimentResult, ActiveExperimentState, ExperimentConfig, ExperimentScenario, Toast, NotificationItem } from './types';
+import { AppLayer, UserAccount, SystemAccount, ExperimentResult, ActiveExperimentState, ExperimentConfig, ExperimentPreset, Toast, NotificationItem } from './types';
 import { NAV_ITEMS } from './constants';
-import { generateMockUsers, generateMockResults, generateMockScenarios, generateSystemAccounts } from './services/mockData';
+import { generateMockUsers, generateMockResults, generateMockPresets, generateSystemAccounts } from './services/mockData';
 import MonitoringLayer from './layers/MonitoringLayer';
 import DeploymentLayer from './layers/DeploymentLayer';
 import EconomyLayer from './layers/EconomyLayer';
 import ExperimentLayer from './layers/ExperimentLayer';
 import LibraryLayer from './layers/LibraryLayer';
-import ScenarioLayer from './layers/ScenarioLayer';
+import PresetLayer from './layers/PresetLayer'; // Changed from ScenarioLayer
 import { LayoutDashboard, Bell, CheckCircle, AlertTriangle, X, Trash2, Info } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -39,21 +39,14 @@ const App: React.FC = () => {
   // --- Global State: Library ---
   const [results, setResults] = useState<ExperimentResult[]>(generateMockResults());
 
-  // --- Global State: Scenarios ---
-  const [scenarios, setScenarios] = useState<ExperimentScenario[]>(generateMockScenarios());
+  // --- Global State: Presets (Formerly Scenarios) ---
+  const [presets, setPresets] = useState<ExperimentPreset[]>(generateMockPresets());
 
-  // --- Global State: Active Experiment ---
+  // --- Global State: Active Experiment (Simplified as mainly local now) ---
   const [experimentState, setExperimentState] = useState<ActiveExperimentState>({
     isRunning: false,
-    progress: 0,
-    logs: [],
     statusMessage: "",
-    config: null,
-    startTime: null,
   });
-
-  // Experiment Logic Ref (to hold interval ID)
-  const experimentInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // --- Global State: Notifications & Toasts ---
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -83,20 +76,16 @@ const App: React.FC = () => {
         read: false 
     };
 
-    // 1. Add to Notification History
     setNotifications(prev => [newNotification, ...prev]);
 
-    // 2. Add to Active Toasts (Limit to 3)
     setToasts(prev => {
         const updated = [...prev, { id, type, title, message }];
         if (updated.length > 3) {
-            // Keep only the last 3 elements
             return updated.slice(updated.length - 3);
         }
         return updated;
     });
 
-    // Auto-remove from screen after 5 seconds
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
@@ -128,7 +117,6 @@ const App: React.FC = () => {
         return;
     }
 
-    // Check if target is User
     const userTarget = users.find(u => u.id === targetId);
     if (userTarget) {
         setUsers(users.map(u => u.id === targetId ? { ...u, balance: u.balance + amount } : u));
@@ -137,7 +125,6 @@ const App: React.FC = () => {
         return;
     }
 
-    // Check if target is System Account (Relayer)
     const sysTarget = systemAccounts.find(a => a.id === targetId);
     if (sysTarget) {
         setSystemAccounts(prev => prev.map(a => {
@@ -153,29 +140,30 @@ const App: React.FC = () => {
     setUsers(users.filter(u => u.id !== id));
   };
 
-  const handleSaveScenario = (name: string, config: ExperimentConfig) => {
-      const existingIndex = scenarios.findIndex(s => s.name === name);
-      const newScenario: ExperimentScenario = {
-          id: existingIndex >= 0 ? scenarios[existingIndex].id : crypto.randomUUID(),
+  const handleSavePreset = (name: string, config: ExperimentConfig, generatorState?: any) => {
+      const existingIndex = presets.findIndex(s => s.name === name);
+      const newPreset: ExperimentPreset = {
+          id: existingIndex >= 0 ? presets[existingIndex].id : crypto.randomUUID(),
           name,
           config,
+          generatorState, // Store extended state
           lastModified: new Date().toISOString()
       };
 
       if (existingIndex >= 0) {
-          const next = [...scenarios];
-          next[existingIndex] = newScenario;
-          setScenarios(next);
-          addToast('success', '保存完了', `シナリオ "${name}" を更新しました。`);
+          const next = [...presets];
+          next[existingIndex] = newPreset;
+          setPresets(next);
+          addToast('success', '保存完了', `プリセット "${name}" を更新しました。`);
       } else {
-          setScenarios([...scenarios, newScenario]);
-          addToast('success', '保存完了', `新しいシナリオ "${name}" を保存しました。`);
+          setPresets([...presets, newPreset]);
+          addToast('success', '保存完了', `新しいプリセット "${name}" を保存しました。`);
       }
   };
 
-  const handleDeleteScenario = (id: string) => {
-      setScenarios(scenarios.filter(s => s.id !== id));
-      addToast('success', '削除完了', 'シナリオを削除しました。');
+  const handleDeletePreset = (id: string) => {
+      setPresets(presets.filter(s => s.id !== id));
+      addToast('success', '削除完了', 'プリセットを削除しました。');
   };
 
   const handleDeleteResult = (id: string) => {
@@ -183,151 +171,12 @@ const App: React.FC = () => {
       addToast('success', '削除完了', '実験結果データを削除しました。');
   };
 
-  // --- Experiment Logic ---
-  const startExperiment = (config: ExperimentConfig, scenarioName: string, estimatedCost: number) => {
-    if (experimentState.isRunning) return;
-
-    // 1. Deduct Cost
-    const userId = config.userId;
-    if (!userId) return;
-    
-    setUsers(prev => prev.map(u => {
-        if (u.id === userId) {
-            return { ...u, balance: u.balance - estimatedCost };
-        }
-        return u;
-    }));
-
-    addToast('success', 'デポジット完了', `アカウントから ${estimatedCost.toLocaleString()} TKN を引き落としました。`);
-
-    // 2. Reset state for new run
-    setExperimentState({
-      isRunning: true,
-      progress: 0,
-      logs: [`[System] Initializing experiment: ${scenarioName}...`],
-      statusMessage: "Initializing...",
-      config: config,
-      startTime: Date.now(),
-    });
-
-    let p = 0;
-    const startTime = Date.now();
-    const shouldFail = config.shouldFail || false;
-    const failAt = 65; // Fail at 65% if scheduled
-
-    // Determine actual chunkSize for logging
-    const chunkSizeKB = config.uploadType === 'Real' && config.realConfig 
-      ? Math.floor((config.realConfig.totalSizeMB * 1024) / 10) || 64 // Mock logic for real files
-      : config.virtualConfig?.chunkSizeKB || 64;
-
-    experimentInterval.current = setInterval(() => {
-      p += 1;
-      
-      // Log generation based on progress
-      const newLogs: string[] = [];
-      const time = new Date().toLocaleTimeString('ja-JP');
-      
-      if (p === 5) newLogs.push(`[${time}] Splitting data into ${chunkSizeKB}KB chunks...`);
-      if (p === 20) newLogs.push(`[${time}] Generating transactions... Strategy: ${config.allocator}`);
-      if (p === 40) newLogs.push(`[${time}] Broadcasting to ${config.targetChains.length} chains...`);
-      
-      // Error Simulation
-      if (shouldFail && p === failAt) {
-        clearInterval(experimentInterval.current!);
-        const failLogs = [...newLogs, `[${time}] [ERROR] Transaction broadcast timeout on data-2.`, `[${time}] [FATAL] Experiment aborted due to network error.`];
-        
-        setExperimentState(prev => ({
-          ...prev,
-          isRunning: false,
-          progress: p,
-          logs: [...prev.logs, ...failLogs],
-          statusMessage: "エラー: 実験が中断されました",
-        }));
-
-        // Fail Cost Logic
-        const actualCost = Math.floor(estimatedCost * 0.8); // Consumed 80% before fail
-        const refund = estimatedCost - actualCost;
-        
-        if (refund > 0) {
-             setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: u.balance + refund } : u));
-        }
-
-        addToast('error', '実験失敗', `エラーにより中断。コスト: ${actualCost} TKN (返金: ${refund} TKN)`);
-        
-        // Save Failed Result
-        saveResult(scenarioName, 'FAILED', config, startTime, Date.now());
-        return;
-      }
-
-      if (p === 90) newLogs.push(`[${time}] Verifying manifest on MetaChain...`);
-      if (p === 100) {
-        clearInterval(experimentInterval.current!);
-        const successLogs = [...newLogs, `[${time}] Experiment Completed Successfully.`];
-        
-        setExperimentState(prev => ({
-          ...prev,
-          isRunning: false,
-          progress: 100,
-          logs: [...prev.logs, ...successLogs],
-          statusMessage: "完了",
-        }));
-
-        addToast('success', '実験完了', 'すべてのデータが正常に処理されました。');
-        saveResult(scenarioName, 'SUCCESS', config, startTime, Date.now());
-        return;
-      }
-
-      setExperimentState(prev => ({
-        ...prev,
-        progress: p,
-        logs: newLogs.length > 0 ? [...prev.logs, ...newLogs] : prev.logs,
-        statusMessage: p < 30 ? "Data Sharding..." : p < 80 ? "Broadcasting..." : "Verifying...",
-      }));
-
-    }, 50); // Simulation Speed
-  };
-
-  const saveResult = (scenarioName: string, status: 'SUCCESS' | 'FAILED' | 'ABORTED', config: ExperimentConfig, startTime: number, endTime: number) => {
-    const durationMs = endTime - startTime;
-    
-    // Correctly calculate data size based on upload type
-    const dataSizeMB = config.uploadType === 'Virtual'
-        ? (config.virtualConfig?.sizeMB || 0)
-        : (config.realConfig?.totalSizeMB || 0);
-
-    const chunkSizeKB = config.uploadType === 'Virtual'
-        ? (config.virtualConfig?.chunkSizeKB || 0)
-        : (config.realConfig ? Math.round((config.realConfig.totalSizeMB * 1024) / 100) : 64); // Rough estimate for real
-
-    // Mock calculations for metrics
-    const uploadTimeMs = Math.floor(durationMs * 0.7);
-    const downloadTimeMs = Math.floor(durationMs * 0.3);
-    
-    // Calculate Throughput (bps) = (SizeMB * 1024 * 1024 * 8) / (TimeSeconds)
-    // Use upload time for upload throughput. Avoid division by zero.
-    const throughputBps = (uploadTimeMs > 0 && dataSizeMB > 0)
-        ? Math.floor((dataSizeMB * 1024 * 1024 * 8) / (uploadTimeMs / 1000)) 
-        : 0;
-
-    const result: ExperimentResult = {
-      id: `exp-${Date.now()}`,
-      scenarioName,
-      executedAt: new Date().toISOString(),
-      status,
-      dataSizeMB,
-      chunkSizeKB,
-      totalTxCount: Math.floor(dataSizeMB * 1024 / (chunkSizeKB || 64)) || 0,
-      allocator: config.allocator,
-      transmitter: config.transmitter,
-      targetChainCount: config.targetChains.length,
-      usedChains: config.targetChains,
-      uploadTimeMs,
-      downloadTimeMs,
-      throughputBps,
-      logs: experimentState.logs // Snapshot
-    };
-
-    setResults(prev => [result, ...prev]);
+  // New Handler for results coming from ExperimentLayer batch execution
+  const handleRegisterResult = (result: ExperimentResult) => {
+      setResults(prev => [result, ...prev]);
+      // Optional: Cost deduction logic is now simulated inside ExperimentLayer 'Ready' check, 
+      // but if we wanted real-time deduction on execution, we would do it here.
+      // For now, assuming ExperimentLayer handles the visual aspects and simply archives the result.
   };
 
   return (
@@ -478,21 +327,20 @@ const App: React.FC = () => {
                     />
                 )}
 
-                {activeLayer === AppLayer.SCENARIO && (
-                    <ScenarioLayer 
-                        scenarios={scenarios}
-                        onDeleteScenario={handleDeleteScenario}
+                {activeLayer === AppLayer.PRESET && (
+                    <PresetLayer 
+                        presets={presets}
+                        onDeletePreset={handleDeletePreset}
                     />
                 )}
                 
                 {activeLayer === AppLayer.EXPERIMENT && (
                     <ExperimentLayer 
-                        activeExperiment={experimentState}
                         users={users}
-                        scenarios={scenarios}
+                        presets={presets}
                         deployedNodeCount={deployedNodeCount}
-                        onRunExperiment={startExperiment}
-                        onSaveScenario={handleSaveScenario}
+                        onRegisterResult={handleRegisterResult}
+                        onSavePreset={handleSavePreset}
                         notify={addToast}
                     />
                 )}

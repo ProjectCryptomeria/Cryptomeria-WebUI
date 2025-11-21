@@ -1,5 +1,5 @@
 
-import { ExperimentResult, NodeStatus, UserAccount, SystemAccount, ExperimentScenario, AllocatorStrategy, TransmitterStrategy } from '../types';
+import { ExperimentResult, NodeStatus, UserAccount, SystemAccount, ExperimentPreset, AllocatorStrategy, TransmitterStrategy } from '../types';
 
 // Mock Nodes for Monitoring
 export const generateMockNodes = (count: number): NodeStatus[] => {
@@ -23,9 +23,9 @@ export const generateMockNodes = (count: number): NodeStatus[] => {
 
 // Mock Users for Economy
 export const generateMockUsers = (): UserAccount[] => [
-  { id: 'u1', address: 'raid1x9...f3a', balance: 5000, role: 'admin' },
-  { id: 'u2', address: 'raid1k2...99z', balance: 120, role: 'client' },
-  { id: 'u3', address: 'raid1p4...m2x', balance: 0, role: 'client' },
+  { id: 'u1', address: 'raid1x9...f3a', balance: 5000, role: 'admin', name: 'Admin User' },
+  { id: 'u2', address: 'raid1k2...99z', balance: 120, role: 'client', name: 'Test Client A' },
+  { id: 'u3', address: 'raid1p4...m2x', balance: 0, role: 'client', name: 'Empty Wallet' },
 ];
 
 // Mock System Accounts
@@ -45,10 +45,10 @@ export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] 
     return accounts;
 }
 
-// Mock Scenarios
-export const generateMockScenarios = (): ExperimentScenario[] => [
+// Mock Presets (formerly Scenarios)
+export const generateMockPresets = (): ExperimentPreset[] => [
   {
-    id: 'sc-1',
+    id: 'preset-1',
     name: 'Basic Latency Check',
     lastModified: new Date().toISOString(),
     config: {
@@ -58,10 +58,20 @@ export const generateMockScenarios = (): ExperimentScenario[] => [
       uploadType: 'Virtual',
       projectName: 'latency-check-project',
       virtualConfig: { sizeMB: 100, chunkSizeKB: 64, files: 10 }
+    },
+    generatorState: {
+        projectName: 'latency-check-project',
+        accountValue: 'u1',
+        dataSize: { mode: 'fixed', fixed: 100, start: 0, end: 0, step: 0 },
+        chunkSize: { mode: 'fixed', fixed: 64, start: 0, end: 0, step: 0 },
+        allocators: [AllocatorStrategy.ROUND_ROBIN],
+        transmitters: [TransmitterStrategy.ONE_BY_ONE],
+        selectedChains: ['datachain-0'],
+        uploadType: 'Virtual'
     }
   },
   {
-    id: 'sc-2',
+    id: 'preset-2',
     name: 'High Load Stress Test',
     lastModified: new Date().toISOString(),
     config: {
@@ -71,6 +81,16 @@ export const generateMockScenarios = (): ExperimentScenario[] => [
       uploadType: 'Virtual',
       projectName: 'stress-test-project',
       virtualConfig: { sizeMB: 5120, chunkSizeKB: 128, files: 500 }
+    },
+    generatorState: {
+        projectName: 'stress-test-project',
+        accountValue: 'u2',
+        dataSize: { mode: 'fixed', fixed: 5120, start: 0, end: 0, step: 0 },
+        chunkSize: { mode: 'fixed', fixed: 128, start: 0, end: 0, step: 0 },
+        allocators: [AllocatorStrategy.AVAILABLE],
+        transmitters: [TransmitterStrategy.MULTI_BURST],
+        selectedChains: ['datachain-0', 'datachain-1', 'datachain-2'],
+        uploadType: 'Virtual'
     }
   }
 ];
@@ -93,6 +113,12 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 35000,
       downloadTimeMs: 10000,
       throughputBps: 23860929,
+      logs: [
+          "[System] Initializing baseline test...",
+          "[Upload] Starting 1GB data generation.",
+          "[Network] Broadcast complete.",
+          "[System] Success."
+      ]
     },
     {
       id: 'exp-002',
@@ -109,6 +135,11 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 10000,
       downloadTimeMs: 2000,
       throughputBps: 0,
+      logs: [
+          "[System] Initializing stress test...",
+          "[Error] Connection timeout on datachain-3.",
+          "[Fatal] Aborted."
+      ]
     },
     {
       id: 'exp-003',
@@ -125,6 +156,11 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 22000,
       downloadTimeMs: 10000,
       throughputBps: 33554432,
+      logs: [
+        "[System] Load Balance check start.",
+        "[Info] All nodes active.",
+        "[System] Done."
+      ]
     },
   ];
 };
