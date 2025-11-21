@@ -1,0 +1,55 @@
+import { useState, useEffect } from 'react';
+import { api } from '../../../services/api';
+import { useWebSocket } from '../../../hooks/useWebSocket';
+
+export const useDeploymentControl = (
+    deployedNodeCount: number,
+    setDeployedNodeCount: (count: number) => void,
+    setIsDockerBuilt: (isBuilt: boolean) => void
+) => {
+    const [scaleCount, setScaleCount] = useState(deployedNodeCount);
+    const [isBuilding, setIsBuilding] = useState(false);
+    const [isDeploying, setIsDeploying] = useState(false);
+    const [logs, setLogs] = useState<string[]>([]);
+    const [activeJobId, setActiveJobId] = useState<string | null>(null);
+
+    useEffect(() => { setScaleCount(deployedNodeCount); }, [deployedNodeCount]);
+
+    useWebSocket<{ jobId: string, type: string, message?: string }>('/ws/deployment/logs', (data) => {
+        if (data.jobId === activeJobId) {
+            if (data.type === 'log' && data.message) {
+                setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${data.message}`]);
+            } else if (data.type === 'complete') {
+                setIsBuilding(false);
+                setIsDockerBuilt(true);
+            }
+        }
+    });
+
+    const handleBuild = async () => {
+        if (isBuilding) return;
+        setLogs([]);
+        setIsBuilding(true);
+        const res = await api.deployment.build();
+        setActiveJobId(res.jobId);
+    };
+
+    const handleDeploy = async () => {
+        if (isDeploying) return;
+        setLogs(prev => [...prev, '>> Initiating Helm Upgrade...']);
+        setIsDeploying(true);
+        await api.deployment.scale(scaleCount);
+        setDeployedNodeCount(scaleCount);
+        setLogs(prev => [...prev, '>> Deployment request accepted.']);
+        setIsDeploying(false);
+    };
+
+    const handleReset = async () => {
+        setLogs([]);
+        await api.deployment.reset();
+        setIsDockerBuilt(false);
+        setDeployedNodeCount(0);
+    };
+
+    return { scaleCount, setScaleCount, isBuilding, isDeploying, logs, handleBuild, handleDeploy, handleReset };
+};
