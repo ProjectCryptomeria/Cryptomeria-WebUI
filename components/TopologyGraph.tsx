@@ -7,50 +7,58 @@ interface TopologyGraphProps {
   nodes: NodeStatus[];
 }
 
+/**
+ * ネットワークトポロジー可視化コンポーネント
+ * ノードの状態配列を受け取り、SVGを用いてControl/Meta/Dataチェーン間の関係図を描画します。
+ * データフロー: Control Chain -> Data Chains (Fragments) -> Meta Chain (Manifest)
+ */
 const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
+  // ノードタイプごとに分類
   const controlNode = nodes.find(n => n.type === 'control');
   const metaNode = nodes.find(n => n.type === 'meta');
   const dataNodes = nodes.filter(n => n.type === 'data');
 
-  // Layout Constants
-  const nodeSpacing = 160;
-  const baseWidth = 1200;
-  const height = 450; // Compact height
+  // --- レイアウト定数と計算 ---
+  const nodeSpacing = 160; // データノード間の水平距離
+  const baseWidth = 1200;  // SVGキャンバスの基本幅
+  const height = 450;      // SVGキャンバスの高さ
   
-  // Calculate dynamic width based on the number of data nodes
-  // If nodes fit in 1200px, use 1200px. Otherwise expand to fit them + margins.
+  // キャンバス幅の動的計算: データノード数に応じて横幅を拡張
   const canvasWidth = useMemo(() => {
-      const requiredWidth = dataNodes.length * nodeSpacing + 200; // 200 for margins
+      const requiredWidth = dataNodes.length * nodeSpacing + 200; // 200pxは余白
       return Math.max(baseWidth, requiredWidth);
   }, [dataNodes.length]);
   
-  // Node Positions based on Data Flow Logic:
-  // 1. Control Chain (Top Center) - The orchestrator
-  const controlPos = { x: canvasWidth / 2, y: 80 }; // Center horizontally based on dynamic width
+  // --- ノード位置の決定 ---
 
-  // 2. Meta Chain (Top Right relative to Control)
+  // 1. Control Chain (Orchestrator): 上段中央
+  const controlPos = { x: canvasWidth / 2, y: 80 };
+
+  // 2. Meta Chain (Registry): 上段右側（Controlの右隣）
   const metaPos = { x: canvasWidth / 2 + 250, y: 100 };
   
-  // 3. Data Chains (Bottom Row) - Receives fragments from Control
+  // 3. Data Chains (Storage): 下段に等間隔で配置
   const dataNodePositions = useMemo(() => {
     const count = dataNodes.length;
     const totalWidth = (count - 1) * nodeSpacing;
-    const startX = canvasWidth / 2 - totalWidth / 2;
+    const startX = canvasWidth / 2 - totalWidth / 2; // 中央揃えの開始位置
     
     return dataNodes.map((node, i) => ({
         ...node,
         x: startX + i * nodeSpacing,
-        y: 350 // Moved up to fit in smaller height
+        y: 350 // 下段のY座標
     }));
   }, [dataNodes, canvasWidth]);
 
-  // Helper to draw orthogonal lines (Manhattan style)
+  // --- 描画ヘルパー関数 ---
+
+  // マンハッタン距離（直角）スタイルの線を描画
   const drawOrthogonalLine = (x1: number, y1: number, x2: number, y2: number, midYRatio: number = 0.5) => {
-      // Calculate a midpoint Y that is between y1 and y2
-      const midY = y1 + (y2 - y1) * midYRatio;
+      const midY = y1 + (y2 - y1) * midYRatio; // 中間点のY座標
       return `M ${x1},${y1} L ${x1},${midY} L ${x2},${midY} L ${x2},${y2}`;
   };
 
+  // 直線を描画
   const drawDirectLine = (x1: number, y1: number, x2: number, y2: number) => {
       return `M ${x1},${y1} L ${x2},${y2}`;
   };
@@ -69,6 +77,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
             preserveAspectRatio="xMidYMid meet"
         >
             <defs>
+                {/* グローエフェクト用のフィルター定義 */}
                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
                     <feMerge>
@@ -81,9 +90,9 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                 </marker>
             </defs>
 
-            {/* --- Connections --- */}
+            {/* --- Connections (リンク描画) --- */}
 
-            {/* 1. Control -> Data (Distribution of Fragments) */}
+            {/* 1. Control -> Data: データの断片化と分散保存を表す破線 */}
             {dataNodePositions.map((dn, i) => (
                 <g key={`link-control-data-${dn.id}`}>
                     <path 
@@ -93,7 +102,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                         strokeWidth="2"
                         strokeDasharray="5,5"
                     />
-                    {/* Animated Packet (Control -> Data) */}
+                    {/* パケットのアニメーション (稼働中のみ表示) */}
                     {dn.status === 'active' && (
                          <circle r="3" fill="#3b82f6">
                            <animateMotion 
@@ -109,7 +118,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                 </g>
             ))}
 
-            {/* 2. Control -> Meta (Writing Manifest) */}
+            {/* 2. Control -> Meta: マニフェスト情報の書き込みを表す実線 */}
             <g>
                 <path 
                     d={drawDirectLine(controlPos.x + 60, controlPos.y, metaPos.x - 50, metaPos.y)}
@@ -117,7 +126,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
                     stroke="#6366f1"
                     strokeWidth="3"
                 />
-                 {/* Packet (Control -> Meta) */}
+                 {/* パケットのアニメーション */}
                  <circle r="4" fill="#a5b4fc">
                     <animateMotion 
                          dur="3s" 
@@ -128,7 +137,8 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
             </g>
 
 
-            {/* --- Nodes Rendering --- */}
+            {/* --- Nodes Rendering (ノード描画) --- */}
+            {/* foreignObjectを使用してHTML要素(Icon等)をSVG内に埋め込む */}
 
             {/* Control Chain (Top Center) */}
             <foreignObject x={controlPos.x - 60} y={controlPos.y - 50} width="120" height="100">

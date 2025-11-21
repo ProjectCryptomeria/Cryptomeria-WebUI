@@ -8,53 +8,60 @@ import DeploymentLayer from './layers/DeploymentLayer';
 import EconomyLayer from './layers/EconomyLayer';
 import ExperimentLayer from './layers/ExperimentLayer';
 import LibraryLayer from './layers/LibraryLayer';
-import PresetLayer from './layers/PresetLayer'; // Changed from ScenarioLayer
+import PresetLayer from './layers/PresetLayer';
 import { LayoutDashboard, Bell, CheckCircle, AlertTriangle, X, Trash2, Info } from 'lucide-react';
 
+/**
+ * メインアプリケーションコンポーネント
+ * アプリケーション全体のレイアウト、ナビゲーション、およびグローバルな状態管理を担当します。
+ * 各レイヤー（機能画面）はここで条件分岐によりレンダリングされます。
+ */
 const App: React.FC = () => {
+  // 現在表示中のレイヤー
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
-  // --- Global State: Infrastructure ---
-  const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5);
-  const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);
+  // --- Global State: Infrastructure (インフラ状態) ---
+  const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5); // 稼働中のDataChainノード数
+  const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);    // Dockerイメージビルド済みフラグ
 
-  // --- Global State: Economy ---
+  // --- Global State: Economy (経済状態) ---
   const [users, setUsers] = useState<UserAccount[]>(generateMockUsers());
   const [systemAccounts, setSystemAccounts] = useState<SystemAccount[]>(generateSystemAccounts(5));
 
-  // Sync System Accounts (Relayers) with Deployed Nodes
+  // デプロイ済みノード数が変更された場合、システムアカウント（Relayer）も同期して増減させる
   useEffect(() => {
       setSystemAccounts(prev => {
           const millionaire = prev.find(a => a.type === 'faucet_source');
-          // Re-generate relayers based on current count
+          // 現在のノード数に基づいてRelayerアカウントを再生成
           const newAccounts = generateSystemAccounts(deployedNodeCount);
           if (millionaire) {
-              // Preserve millionaire balance
+              // Millionaireアカウントの残高は維持する
               newAccounts[0].balance = millionaire.balance;
           }
           return newAccounts;
       });
   }, [deployedNodeCount]);
 
-  // --- Global State: Library ---
+  // --- Global State: Library (実験結果) ---
   const [results, setResults] = useState<ExperimentResult[]>(generateMockResults());
 
-  // --- Global State: Presets (Formerly Scenarios) ---
+  // --- Global State: Presets (保存済み設定) ---
   const [presets, setPresets] = useState<ExperimentPreset[]>(generateMockPresets());
 
-  // --- Global State: Active Experiment (Simplified as mainly local now) ---
+  // --- Global State: Active Experiment (実行状態) ---
+  // ※現在は主にExperimentLayer内で完結しているが、将来的な拡張のため保持
   const [experimentState, setExperimentState] = useState<ActiveExperimentState>({
     isRunning: false,
     statusMessage: "",
   });
 
-  // --- Global State: Notifications & Toasts ---
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  // --- Global State: Notifications (通知) ---
+  const [toasts, setToasts] = useState<Toast[]>([]); // 画面右下のトースト通知
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]); // ベルアイコンの通知履歴
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Close notification dropdown when clicking outside
+  // 通知ドロップダウンの外側クリック検知
   useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
           if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
@@ -65,6 +72,7 @@ const App: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // トースト通知の追加
   const addToast = (type: 'success' | 'error', title: string, message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newNotification: NotificationItem = {
@@ -80,12 +88,14 @@ const App: React.FC = () => {
 
     setToasts(prev => {
         const updated = [...prev, { id, type, title, message }];
+        // 最大3件まで表示
         if (updated.length > 3) {
             return updated.slice(updated.length - 3);
         }
         return updated;
     });
 
+    // 5秒後に自動消去
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
@@ -95,8 +105,9 @@ const App: React.FC = () => {
       setNotifications([]);
   };
 
-  // --- Handlers ---
+  // --- Handlers (各レイヤーからのコールバック) ---
   
+  // ユーザー作成
   const handleCreateUser = () => {
     const newUser: UserAccount = {
       id: `u${Date.now()}`,
@@ -107,6 +118,7 @@ const App: React.FC = () => {
     setUsers([...users, newUser]);
   };
 
+  // Faucet (資金給付)
   const handleFaucet = (targetId: string) => {
     const amount = 1000;
     const millionaire = systemAccounts.find(a => a.type === 'faucet_source');
@@ -117,6 +129,7 @@ const App: React.FC = () => {
         return;
     }
 
+    // ターゲットがユーザーの場合
     const userTarget = users.find(u => u.id === targetId);
     if (userTarget) {
         setUsers(users.map(u => u.id === targetId ? { ...u, balance: u.balance + amount } : u));
@@ -125,6 +138,7 @@ const App: React.FC = () => {
         return;
     }
 
+    // ターゲットがシステムアカウント（Relayerなど）の場合
     const sysTarget = systemAccounts.find(a => a.id === targetId);
     if (sysTarget) {
         setSystemAccounts(prev => prev.map(a => {
@@ -140,29 +154,32 @@ const App: React.FC = () => {
     setUsers(users.filter(u => u.id !== id));
   };
 
+  // プリセット保存
   const handleSavePreset = (name: string, config: ExperimentConfig, generatorState?: any) => {
       const existingIndex = presets.findIndex(s => s.name === name);
       const newPreset: ExperimentPreset = {
           id: existingIndex >= 0 ? presets[existingIndex].id : crypto.randomUUID(),
           name,
           config,
-          generatorState, // Store extended state
+          generatorState, // UI復元用の状態
           lastModified: new Date().toISOString()
       };
 
       if (existingIndex >= 0) {
+          // 更新
           const next = [...presets];
           next[existingIndex] = newPreset;
           setPresets(next);
           addToast('success', '保存完了', `プリセット "${name}" を更新しました。`);
       } else {
+          // 新規作成
           setPresets([...presets, newPreset]);
           addToast('success', '保存完了', `新しいプリセット "${name}" を保存しました。`);
       }
   };
 
   const handleDeletePreset = (id: string) => {
-      setPresets(presets.filter(s => s.id !== id));
+      setPresets(prev => prev.filter(s => s.id !== id));
       addToast('success', '削除完了', 'プリセットを削除しました。');
   };
 
@@ -171,18 +188,15 @@ const App: React.FC = () => {
       addToast('success', '削除完了', '実験結果データを削除しました。');
   };
 
-  // New Handler for results coming from ExperimentLayer batch execution
+  // 実験完了結果の登録
   const handleRegisterResult = (result: ExperimentResult) => {
       setResults(prev => [result, ...prev]);
-      // Optional: Cost deduction logic is now simulated inside ExperimentLayer 'Ready' check, 
-      // but if we wanted real-time deduction on execution, we would do it here.
-      // For now, assuming ExperimentLayer handles the visual aspects and simply archives the result.
   };
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
       
-      {/* --- Header --- */}
+      {/* --- Header Area --- */}
       <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-40 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
            <div className="bg-blue-600 p-1.5 rounded-lg">
@@ -252,7 +266,7 @@ const App: React.FC = () => {
       {/* --- Navigation & Main Content --- */}
       <div className="flex flex-1 overflow-hidden">
         
-        {/* Sidebar Nav */}
+        {/* Sidebar Nav (サイドバー) */}
         <nav className="w-64 bg-white border-r border-slate-200 flex flex-col py-6 gap-1 z-30 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] shrink-0 overflow-y-auto">
             <div className="px-6 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Main Menu</div>
             {NAV_ITEMS.map(item => {
@@ -301,10 +315,10 @@ const App: React.FC = () => {
             </div>
         </nav>
 
-        {/* Main Viewport */}
+        {/* Main Viewport (メインコンテンツエリア) */}
         <main className="flex-1 bg-slate-50/50 relative overflow-hidden">
             
-            {/* Layer Container */}
+            {/* Layer Container: 選択されたレイヤーを表示 */}
             <div className="h-full w-full p-6 overflow-y-auto custom-scrollbar">
                 {activeLayer === AppLayer.MONITORING && <MonitoringLayer deployedNodeCount={deployedNodeCount} />}
                 
@@ -348,7 +362,7 @@ const App: React.FC = () => {
                 {activeLayer === AppLayer.LIBRARY && <LibraryLayer results={results} onDeleteResult={handleDeleteResult} />}
             </div>
 
-            {/* Toast Overlay */}
+            {/* Toast Overlay (トースト通知) */}
             <div className="absolute bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
                 {toasts.map(toast => (
                     <div key={toast.id} className="bg-white rounded-lg shadow-lg border border-slate-200 p-4 w-80 animate-in slide-in-from-right-10 fade-in duration-300 pointer-events-auto flex items-start gap-3">
