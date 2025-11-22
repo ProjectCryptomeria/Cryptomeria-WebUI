@@ -1,6 +1,7 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/App.tsx
+
 import React, { useState } from 'react';
 import { AppLayer, ExperimentResult, ExperimentConfig, ExperimentPreset } from './src/types';
-import { generateMockPresets } from './src/backend_mock/mockData';
 import MonitoringLayer from './src/features/monitoring';
 import DeploymentLayer from './src/features/deployment';
 import EconomyLayer from './src/features/economy';
@@ -24,28 +25,51 @@ const App: React.FC = () => {
 
     // Library & Presets
     const [results, setResults] = useState<ExperimentResult[]>([]);
-    React.useEffect(() => {
-        api.library.getResults().then(setResults);
-    }, [activeLayer]); // Refresh when switching tabs
+    const [presets, setPresets] = useState<ExperimentPreset[]>([]);
 
-    const [presets, setPresets] = useState<ExperimentPreset[]>(generateMockPresets());
-
-    const handleSavePreset = (name: string, config: ExperimentConfig, generatorState?: any) => {
-        const existingIndex = presets.findIndex(s => s.name === name);
-        const newPreset: ExperimentPreset = {
-            id: existingIndex >= 0 ? presets[existingIndex].id : crypto.randomUUID(),
-            name, config, generatorState, lastModified: new Date().toISOString()
-        };
-        if (existingIndex >= 0) {
-            const next = [...presets]; next[existingIndex] = newPreset; setPresets(next);
-            addToast('success', 'Saved', `Preset "${name}" updated.`);
-        } else {
-            setPresets([...presets, newPreset]);
-            addToast('success', 'Saved', `Preset "${name}" created.`);
+    const loadData = async () => {
+        try {
+            const [resResults, resPresets] = await Promise.all([
+                api.library.getResults(),
+                api.preset.getAll()
+            ]);
+            setResults(resResults);
+            setPresets(resPresets);
+        } catch (e) {
+            console.error("Failed to load initial data", e);
         }
     };
 
-    const handleDeletePreset = (id: string) => { setPresets(prev => prev.filter(s => s.id !== id)); addToast('success', 'Deleted', 'Preset removed.'); };
+    React.useEffect(() => {
+        loadData();
+    }, [activeLayer]); // Refresh when switching tabs
+
+    const handleSavePreset = async (name: string, config: ExperimentConfig, generatorState?: any) => {
+        const existing = presets.find(s => s.name === name);
+        const newPreset: ExperimentPreset = {
+            id: existing ? existing.id : crypto.randomUUID(),
+            name, config, generatorState, lastModified: new Date().toISOString()
+        };
+
+        try {
+            await api.preset.save(newPreset);
+            addToast('success', 'Saved', `Preset "${name}" ${existing ? 'updated' : 'created'}.`);
+            loadData();
+        } catch (e) {
+            addToast('error', 'Error', 'Failed to save preset');
+        }
+    };
+
+    const handleDeletePreset = async (id: string) => {
+        try {
+            await api.preset.delete(id);
+            addToast('success', 'Deleted', 'Preset removed.');
+            loadData();
+        } catch (e) {
+            addToast('error', 'Error', 'Failed to delete preset');
+        }
+    };
+
     const handleDeleteResult = (id: string) => {
         api.library.deleteResult(id).then(() => {
             setResults(results.filter(r => r.id !== id));

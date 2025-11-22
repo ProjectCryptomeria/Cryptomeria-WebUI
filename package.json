@@ -19,8 +19,14 @@
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "msw": "^2.12.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   },
-  "packageManager": "yarn@4.11.0"
+  "packageManager": "yarn@4.11.0",
+  "msw": {
+    "workerDirectory": [
+      ""
+    ]
+  }
 }

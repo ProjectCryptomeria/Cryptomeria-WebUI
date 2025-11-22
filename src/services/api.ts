@@ -1,9 +1,10 @@
-import { ExperimentConfig, ExperimentScenario } from '../types';
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/services/api.ts
+
+import { ExperimentConfig, ExperimentScenario, ExperimentPreset } from '../types';
 
 /**
  * API Client
- * 
- * すべてのバックエンドAPIへのリクエストを管理します。
+ * * すべてのバックエンドAPIへのリクエストを管理します。
  * 実際のAPIとの統合時は、MSWを無効化するだけで切り替え可能です。
  */
 export const api = {
@@ -83,6 +84,27 @@ export const api = {
     deleteResult: async (id: string) => {
       const response = await fetch(`/api/library/results/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete result');
+      return response.json();
+    }
+  },
+  preset: {
+    getAll: async () => {
+      const response = await fetch('/api/presets');
+      if (!response.ok) throw new Error('Failed to fetch presets');
+      return response.json();
+    },
+    save: async (preset: ExperimentPreset) => {
+      const response = await fetch('/api/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preset)
+      });
+      if (!response.ok) throw new Error('Failed to save preset');
+      return response.json();
+    },
+    delete: async (id: string) => {
+      const response = await fetch(`/api/presets/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete preset');
       return response.json();
     }
   }

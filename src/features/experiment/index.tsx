@@ -1,3 +1,5 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/index.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { AllocatorStrategy, TransmitterStrategy, ExperimentConfig, UserAccount, ExperimentPreset, ExperimentScenario, ExperimentResult } from '../../types';
 import { Settings2, Box, Upload, Zap, List, CheckCircle2, AlertCircle, PlayCircle, Save, RotateCcw, Loader2, X, ChevronDown, FolderOpen, FileCode, Info, ChevronUp, Lock, ArrowLeft, Bookmark, CheckCircle, Folder, Clock, Database, Puzzle } from 'lucide-react';
@@ -8,6 +10,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
 import { useFileUploadTree } from './hooks/useFileUploadTree';
 import { useScenarioExecution } from './hooks/useScenarioExecution';
+import { BottomPanel } from '../../components/ui/BottomPanel';
 
 interface ExperimentLayerProps {
     users: UserAccount[];
@@ -124,7 +127,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
     const [newPresetName, setNewPresetName] = useState("");
 
     // Resizable Panel Hook
-    const { isOpen: isResultsPanelOpen, setIsOpen: setIsResultsPanelOpen, height: panelHeight, panelRef, resizerRef } = useResizerPanel(320, 100, 0.8);
+    const resizer = useResizerPanel(320, 100, 0.8);
 
     // Basic Settings
     const [projectName, setProjectName] = useState("複合パラメータテスト");
@@ -174,7 +177,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
             selectedAllocators,
             selectedTransmitters,
             selectedChains,
-            setIsOpen: setIsResultsPanelOpen
+            setIsOpen: resizer.setIsOpen
         });
     };
 
@@ -530,35 +533,23 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
                     </div>
 
                     {/* Results Panel (Fixed Bottom) */}
-                    <div
-                        ref={panelRef}
-                        className={`absolute bottom-0 left-0 right-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 rounded-t-[2rem] border-t border-gray-100 flex flex-col bottom-panel-transition ${isResultsPanelOpen ? '' : 'h-20'}`}
-                        style={{ height: isResultsPanelOpen ? panelHeight : undefined }}
+                    <BottomPanel
+                        {...resizer}
+                        title={
+                            <>
+                                生成結果
+                                <span className="ml-3 bg-primary-indigo text-white text-sm font-bold px-2.5 py-0.5 rounded-full shadow-sm shadow-indigo-200">
+                                    {scenarios.length}
+                                </span>
+                            </>
+                        }
+                        icon={List}
+                        headerRight={
+                            <div className="text-base text-gray-600 font-medium hidden sm:block">
+                                総コスト試算: <span className="font-mono font-bold text-gray-900 text-lg">{totalCost}</span> TKN
+                            </div>
+                        }
                     >
-                        {/* Resizer Handle */}
-                        <div ref={resizerRef} className="absolute top-0 left-0 right-0 h-4 w-full cursor-row-resize z-50 group flex justify-center items-center">
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full group-hover:bg-primary-indigo transition-colors"></div>
-                        </div>
-
-                        {/* Header */}
-                        <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-[2rem] cursor-pointer hover:bg-gray-50 transition-colors relative z-40 mt-1" onClick={() => setIsResultsPanelOpen(!isResultsPanelOpen)}>
-                            <div className="flex items-center">
-                                <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
-                                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center mr-3 text-primary-indigo">
-                                        <List className="w-5 h-5" />
-                                    </div>
-                                    生成結果
-                                    <span className="ml-3 bg-primary-indigo text-white text-sm font-bold px-2.5 py-0.5 rounded-full shadow-sm shadow-indigo-200">{scenarios.length}</span>
-                                </h2>
-                                <div className="text-base text-gray-600 ml-8 font-medium hidden sm:block">
-                                    総コスト試算: <span className="font-mono font-bold text-gray-900 text-lg">{totalCost}</span> TKN
-                                </div>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                <ChevronUp className={`w-5 h-5 transition-transform ${isResultsPanelOpen ? 'rotate-180' : ''}`} />
-                            </div>
-                        </div>
-
                         {/* Status Bar & Execute */}
                         <div className="px-8 py-3 bg-indigo-50/50 border-b border-indigo-50 flex items-center justify-between gap-4 shrink-0">
                             <div className="flex items-center space-x-8 text-sm">
@@ -652,7 +643,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ users, presets, deplo
                                 );
                             })}
                         </div>
-                    </div>
+                    </BottomPanel>
 
                     {/* Sidebar Toggle Button */}
                     <button onClick={() => setIsPresetPanelOpen(true)} className={`absolute top-4 right-0 bg-white border border-gray-200 shadow-lg rounded-l-xl p-3 text-scenario-accent hover:bg-orange-50 transition-all z-20 ${isPresetPanelOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0'}`}>

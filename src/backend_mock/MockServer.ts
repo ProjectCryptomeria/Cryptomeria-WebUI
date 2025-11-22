@@ -1,11 +1,11 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/backend_mock/MockServer.ts
 
-import { ExperimentScenario, ExperimentResult, NodeStatus, UserAccount, SystemAccount, MonitoringUpdate, PacketEvent, MempoolInfo } from '../types';
-import { generateMockNodes, generateMockUsers, generateSystemAccounts, generateMockResults } from './mockData';
+import { ExperimentScenario, ExperimentResult, NodeStatus, UserAccount, SystemAccount, MonitoringUpdate, PacketEvent, MempoolInfo, ExperimentPreset } from '../types';
+import { generateMockNodes, generateMockUsers, generateSystemAccounts, generateMockResults, generateMockPresets } from './mockData';
 
 /**
  * Mock Backend Service
- * 
- * ブラウザ内でバックエンドサーバーの挙動を完全にシミュレートします。
+ * * ブラウザ内でバックエンドサーバーの挙動を完全にシミュレートします。
  * 状態（DB）を保持し、VirtualSocketを通じてリアルタイムイベントを発火させます。
  */
 
@@ -63,6 +63,7 @@ class MockServerInstance {
   private users: UserAccount[] = [];
   private systemAccounts: SystemAccount[] = [];
   private results: ExperimentResult[] = [];
+  private presets: ExperimentPreset[] = [];
 
   private intervals: any[] = [];
   private subscribers: { [url: string]: ((data: any) => void)[] } = {};
@@ -77,7 +78,8 @@ class MockServerInstance {
     this.users = generateMockUsers();
     this.systemAccounts = generateSystemAccounts(this.deployedNodeCount);
     this.results = generateMockResults();
-    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data - ${i} `, txs: Math.floor(Math.random() * 50) }));
+    this.presets = generateMockPresets();
+    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: Math.floor(Math.random() * 50) }));
   }
 
   // --- Event Loop (Heartbeat) ---
@@ -97,9 +99,9 @@ class MockServerInstance {
       if (this.deployedNodeCount > 0 && Math.random() > 0.6) {
         const targetIdx = Math.floor(Math.random() * this.deployedNodeCount);
         const packet: PacketEvent = {
-          id: `pkt - ${Date.now()} `,
+          id: `pkt-${Date.now()}`,
           from: 'control-chain',
-          to: `datachain - ${targetIdx} `,
+          to: `datachain-${targetIdx}`,
           type: 'ibc_transfer',
           timestamp: Date.now()
         };
@@ -111,7 +113,7 @@ class MockServerInstance {
   private updateNodes() {
     if (this.nodes.length !== 2 + this.deployedNodeCount) {
       this.nodes = generateMockNodes(this.deployedNodeCount);
-      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data - ${i} `, txs: 0 }));
+      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: 0 }));
     }
 
     this.nodes = this.nodes.map(n => ({
@@ -129,12 +131,10 @@ class MockServerInstance {
 
   // --- Pub/Sub System ---
   public subscribe(url: string, callback: (data: any) => void) {
-    // Handle query params for subscription routing if needed (simple match for now)
     const baseUrl = url.split('?')[0];
     if (!this.subscribers[baseUrl]) this.subscribers[baseUrl] = [];
     this.subscribers[baseUrl].push(callback);
 
-    // Send initial data immediately
     if (baseUrl === '/ws/monitoring') {
       callback({ nodes: this.nodes, mempool: this.mempool, deployedCount: this.deployedNodeCount });
     }
@@ -156,7 +156,7 @@ class MockServerInstance {
   async buildImage() {
     return new Promise<{ jobId: string }>(resolve => {
       setTimeout(() => {
-        const jobId = `build - ${Date.now()} `;
+        const jobId = `build-${Date.now()}`;
         this.startBuildJob(jobId);
         resolve({ jobId });
       }, 500);
@@ -175,10 +175,10 @@ class MockServerInstance {
     let step = 0;
     const interval = setInterval(() => {
       if (step >= logs.length) {
-        this.broadcast(`/ ws / deployment / logs`, { jobId, type: 'complete' });
+        this.broadcast('/ws/deployment/logs', { jobId, type: 'complete' });
         clearInterval(interval);
       } else {
-        this.broadcast(`/ ws / deployment / logs`, { jobId, type: 'log', message: logs[step] });
+        this.broadcast('/ws/deployment/logs', { jobId, type: 'log', message: logs[step] });
         step++;
       }
     }, 800);
@@ -198,11 +198,11 @@ class MockServerInstance {
 
   async createUser() {
     const newUser: UserAccount = {
-      id: `u${Date.now()} `,
-      address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)} `,
+      id: `u${Date.now()}`,
+      address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)}`,
       balance: 0,
       role: 'client',
-      name: `Client ${this.users.length} `
+      name: `Client ${this.users.length}`
     };
     this.users.push(newUser);
     return newUser;
@@ -218,11 +218,8 @@ class MockServerInstance {
     if (!millionaire || millionaire.balance < amount) throw new Error("Pool Empty");
 
     let targetName = "";
-
-    // Update System Account
     millionaire.balance -= amount;
 
-    // Update Target
     const user = this.users.find(u => u.id === targetId);
     if (user) {
       user.balance += amount;
@@ -239,34 +236,31 @@ class MockServerInstance {
 
   // Experiment
   async runExperiment(scenarios: ExperimentScenario[]) {
-    const executionId = `exec - ${Date.now()} `;
-    // Start async simulation
+    const executionId = `exec-${Date.now()}`;
     this.startExperimentSimulation(executionId, scenarios);
     return { executionId };
   }
 
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
-    // Simulate sequential execution
     for (const scenario of scenarios) {
       if (scenario.status !== 'READY') continue;
 
-      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, status: 'RUNNING', log: '[INFO] Initializing transaction batch...' });
+      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, status: 'RUNNING', log: '[INFO] Initializing transaction batch...' });
       await new Promise(r => setTimeout(r, 800));
 
-      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, log: '[INFO] Broadcast Tx: 0x3a...f1' });
+      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, log: '[INFO] Broadcast Tx: 0x3a...f1' });
       await new Promise(r => setTimeout(r, 800));
 
       const success = Math.random() > 0.15;
       const status = success ? 'COMPLETE' : 'FAIL';
       const log = success ? '[SUCCESS] Data commited to block.' : '[ERROR] Consensus timeout.';
 
-      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, status, log });
+      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, status, log });
 
       if (success) {
-        // Save result
         this.results.unshift({
-          id: `res - ${scenario.uniqueId} `,
-          scenarioName: `Auto Execution #${scenario.id} `,
+          id: `res-${scenario.uniqueId}`,
+          scenarioName: `Auto Execution #${scenario.id}`,
           executedAt: new Date().toISOString(),
           status: 'SUCCESS',
           dataSizeMB: scenario.dataSize,
@@ -283,13 +277,27 @@ class MockServerInstance {
         });
       }
     }
-    this.broadcast(`/ ws / experiment / progress`, { executionId, type: 'ALL_COMPLETE' });
+    this.broadcast('/ws/experiment/progress', { executionId, type: 'ALL_COMPLETE' });
   }
 
   async getResults() { return this.results; }
   async deleteResult(id: string) { this.results = this.results.filter(r => r.id !== id); return true; }
+
+  // Preset
+  async getPresets() { return this.presets; }
+  async savePreset(preset: ExperimentPreset) {
+    const index = this.presets.findIndex(p => p.id === preset.id);
+    if (index >= 0) {
+      this.presets[index] = preset;
+    } else {
+      this.presets.push(preset);
+    }
+    return preset;
+  }
+  async deletePreset(id: string) {
+    this.presets = this.presets.filter(p => p.id !== id);
+    return true;
+  }
 }
 
 export const MockServer = new MockServerInstance();
-
-// Note: api client has been moved to services/api.ts to use fetch + MSW

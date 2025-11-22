@@ -1,11 +1,11 @@
-import { MockServer } from '../src/backend_mock/MockServer';
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/mocks/handlers.ts
 
-const { http, HttpResponse, delay } = window.MockServiceWorker;
+import { http, HttpResponse, delay } from 'msw';
+import { MockServer } from '../src/backend_mock/MockServer';
 
 /**
  * MSW Handlers
- * 
- * すべてのHTTPリクエストをインターセプトし、MockServerにルーティングします。
+ * * すべてのHTTPリクエストをインターセプトし、MockServerにルーティングします。
  * 遅延の制御、エラーハンドリング、レスポンス形式の統一を行います。
  */
 export const handlers = [
@@ -55,7 +55,7 @@ export const handlers = [
       return HttpResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    await MockServer.deleteUser(id);
+    await MockServer.deleteUser(id as string);
     return HttpResponse.json({ success: true });
   }),
 
@@ -115,7 +115,29 @@ export const handlers = [
       return HttpResponse.json({ error: 'Result ID is required' }, { status: 400 });
     }
 
-    await MockServer.deleteResult(id);
+    await MockServer.deleteResult(id as string);
     return HttpResponse.json({ success: true });
-  })
+  }),
+
+  // --- Preset Layer ---
+  http.get('/api/presets', async () => {
+    await delay(200);
+    const presets = await MockServer.getPresets();
+    return HttpResponse.json(presets);
+  }),
+
+  http.post('/api/presets', async ({ request }: any) => {
+    await delay(300);
+    const preset = await request.json();
+    const saved = await MockServer.savePreset(preset);
+    return HttpResponse.json(saved);
+  }),
+
+  http.delete('/api/presets/:id', async ({ params }: any) => {
+    await delay(300);
+    const { id } = params;
+    if (!id) return HttpResponse.json({ error: 'ID required' }, { status: 400 });
+    await MockServer.deletePreset(id as string);
+    return HttpResponse.json({ success: true });
+  }),
 ];
