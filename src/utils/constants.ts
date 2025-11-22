@@ -1,5 +1,5 @@
 
-import { AppLayer } from './types';
+import { AppLayer } from '../types';
 import { Activity, Server, Coins, TestTube, Library, ScrollText } from 'lucide-react';
 
 /**

@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { ExperimentPreset } from '../types';
+import { ExperimentPreset } from '../../types';
 import { Trash2, FileText, Clock, Settings2, X, Database, Puzzle, Network, AlertTriangle, ArrowRight, Layers, Hash, ChevronDown, Monitor, Bookmark } from 'lucide-react';
-import { Card, SlideOver, Badge, Modal, PageHeader, Button } from '../components/Shared';
+import { Card } from '../../components/ui/Card';
+import { SlideOver } from '../../components/ui/SlideOver';
+import { Badge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Button } from '../../components/ui/Button';
 
 interface PresetLayerProps {
     presets: ExperimentPreset[];
@@ -81,9 +86,9 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
 
     return (
         <div className="h-full flex flex-col pb-10">
-            <PageHeader 
-                title="Experiment Presets" 
-                description="保存された実験設定のテンプレート管理" 
+            <PageHeader
+                title="Experiment Presets"
+                description="保存された実験設定のテンプレート管理"
                 icon={Bookmark}
                 iconColor="text-orange-500"
                 action={<Badge color="slate" className="text-sm py-2 px-4">{presets.length} Presets</Badge>}
@@ -96,7 +101,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
                 </div>
                 <h3 className="text-xl font-bold text-slate-800 mb-2">プリセット削除</h3>
                 <p className="text-sm text-slate-500 mb-8 leading-relaxed px-2">
-                    保存された設定は完全に削除されます。<br/>本当によろしいですか？
+                    保存された設定は完全に削除されます。<br />本当によろしいですか？
                 </p>
                 <div className="flex gap-4 justify-center">
                     <Button variant="secondary" onClick={() => setDeleteTargetId(null)}>キャンセル</Button>
@@ -114,9 +119,9 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
                         {presets.map(preset => (
-                            <Card 
-                                key={preset.id} 
-                                onClick={() => setSelectedPreset(preset)} 
+                            <Card
+                                key={preset.id}
+                                onClick={() => setSelectedPreset(preset)}
                                 className={`p-6 h-full group hover:shadow-xl transition-all duration-300 cursor-pointer relative flex flex-col justify-between border-2 ${selectedPreset?.id === preset.id ? 'border-blue-500 ring-4 ring-blue-50 shadow-xl' : 'border-transparent hover:border-blue-200'}`}
                             >
                                 <div>
@@ -130,19 +135,19 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
                                                 <div className="flex items-center gap-2 text-xs text-slate-400 font-medium mt-1"><Clock className="w-3 h-3" />{new Date(preset.lastModified).toLocaleString('ja-JP')}</div>
                                             </div>
                                         </div>
-                                        <Button 
+                                        <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={(e) => handleDeleteClick(e, preset.id)} 
-                                            className="text-slate-300 hover:text-red-500 hover:bg-red-50 w-8 h-8 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-all" 
+                                            onClick={(e) => handleDeleteClick(e, preset.id)}
+                                            className="text-slate-300 hover:text-red-500 hover:bg-red-50 w-8 h-8 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
                                     </div>
                                     <div className="flex flex-wrap gap-2 mt-6">
-                                        <Badge color="blue" className="flex items-center gap-1.5"><Database className="w-3 h-3"/>{getSizeDisplay(preset)}</Badge>
-                                        <Badge color="purple" className="flex items-center gap-1.5"><Puzzle className="w-3 h-3"/>{getChunkDisplay(preset)}</Badge>
-                                        <Badge color="green" className="flex items-center gap-1.5"><Monitor className="w-3 h-3"/>{getChainCount(preset)} Chains</Badge>
+                                        <Badge color="blue" className="flex items-center gap-1.5"><Database className="w-3 h-3" />{getSizeDisplay(preset)}</Badge>
+                                        <Badge color="purple" className="flex items-center gap-1.5"><Puzzle className="w-3 h-3" />{getChunkDisplay(preset)}</Badge>
+                                        <Badge color="green" className="flex items-center gap-1.5"><Monitor className="w-3 h-3" />{getChainCount(preset)} Chains</Badge>
                                     </div>
                                 </div>
                             </Card>
@@ -171,7 +176,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
 
                         <div className="p-8 space-y-10 flex-1 overflow-y-auto custom-scrollbar bg-white">
                             <section>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Hash className="w-4 h-4"/> Overview Stats</h4>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Hash className="w-4 h-4" /> Overview Stats</h4>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center hover:scale-105 transition-transform">
                                         <div className="text-blue-600 mb-2 flex justify-center"><Database className="w-6 h-6" /></div>
@@ -192,34 +197,34 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Settings2 className="w-4 h-4"/> Parameters</h4>
-                                
-                                <DetailRow 
-                                    label="Data Source" 
-                                    value={selectedPreset.config.uploadType} 
-                                    icon={FileText} 
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Settings2 className="w-4 h-4" /> Parameters</h4>
+
+                                <DetailRow
+                                    label="Data Source"
+                                    value={selectedPreset.config.uploadType}
+                                    icon={FileText}
                                     subValue={selectedPreset.config.uploadType === 'Virtual' ? 'Generated on-the-fly' : 'Physical files'}
                                 />
 
                                 {selectedPreset.generatorState?.dataSize.mode === 'range' ? (
-                                    <RangeVisualizer 
-                                        label="Data Size" 
-                                        start={selectedPreset.generatorState.dataSize.start} 
-                                        end={selectedPreset.generatorState.dataSize.end} 
-                                        step={selectedPreset.generatorState.dataSize.step} 
-                                        unit="MB" 
+                                    <RangeVisualizer
+                                        label="Data Size"
+                                        start={selectedPreset.generatorState.dataSize.start}
+                                        end={selectedPreset.generatorState.dataSize.end}
+                                        step={selectedPreset.generatorState.dataSize.step}
+                                        unit="MB"
                                     />
                                 ) : (
                                     <DetailRow label="Data Size (Fixed)" value={`${selectedPreset.generatorState?.dataSize.fixed} MB`} icon={Database} />
                                 )}
 
                                 {selectedPreset.generatorState?.chunkSize.mode === 'range' ? (
-                                    <RangeVisualizer 
-                                        label="Chunk Size" 
-                                        start={selectedPreset.generatorState.chunkSize.start} 
-                                        end={selectedPreset.generatorState.chunkSize.end} 
-                                        step={selectedPreset.generatorState.chunkSize.step} 
-                                        unit="KB" 
+                                    <RangeVisualizer
+                                        label="Chunk Size"
+                                        start={selectedPreset.generatorState.chunkSize.start}
+                                        end={selectedPreset.generatorState.chunkSize.end}
+                                        step={selectedPreset.generatorState.chunkSize.step}
+                                        unit="KB"
                                     />
                                 ) : (
                                     <DetailRow label="Chunk Size (Fixed)" value={`${selectedPreset.generatorState?.chunkSize.fixed} KB`} icon={Puzzle} />
@@ -227,7 +232,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
                             </section>
 
                             <section>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Network className="w-4 h-4"/> Strategies</h4>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Network className="w-4 h-4" /> Strategies</h4>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-5 rounded-2xl border border-slate-200 hover:border-blue-400 transition-colors group bg-slate-50/50">
                                         <div className="text-xs text-slate-400 font-bold uppercase mb-2">Allocator</div>

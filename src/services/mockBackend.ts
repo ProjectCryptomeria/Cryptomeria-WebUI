@@ -1,5 +1,5 @@
 
-import { NodeStatus, UserAccount, SystemAccount, ExperimentResult, ExperimentScenario, MonitoringUpdate, PacketEvent, MempoolInfo } from '../types';
+import { ExperimentScenario, ExperimentResult, NodeStatus, UserAccount, SystemAccount, MonitoringUpdate, PacketEvent, MempoolInfo } from '../types';
 import { generateMockNodes, generateMockUsers, generateSystemAccounts, generateMockResults } from './mockData';
 
 /**
@@ -23,12 +23,12 @@ export class VirtualSocket {
   constructor(url: string) {
     this.url = url;
     console.log(`[MockWS] Connecting to ${url}...`);
-    
+
     // Simulate connection delay
     setTimeout(() => {
       if (this.isClosed) {
-          console.log(`[MockWS] Connection aborted for ${url} (closed before open)`);
-          return;
+        console.log(`[MockWS] Connection aborted for ${url}(closed before open)`);
+        return;
       }
 
       if (this.onopen) this.onopen();
@@ -42,7 +42,7 @@ export class VirtualSocket {
 
   send(data: string) {
     if (this.isClosed) return;
-    console.log(`[MockWS] Sent: ${data}`);
+    console.log(`[MockWS] Sent: ${data} `);
     // If needed, handle client-to-server messages here
   }
 
@@ -50,7 +50,7 @@ export class VirtualSocket {
     this.isClosed = true;
     if (this.cleanup) this.cleanup();
     if (this.onclose) this.onclose();
-    console.log(`[MockWS] Closed ${this.url}`);
+    console.log(`[MockWS] Closed ${this.url} `);
   }
 }
 
@@ -63,7 +63,7 @@ class MockServerInstance {
   private users: UserAccount[] = [];
   private systemAccounts: SystemAccount[] = [];
   private results: ExperimentResult[] = [];
-  
+
   private intervals: any[] = [];
   private subscribers: { [url: string]: ((data: any) => void)[] } = {};
 
@@ -77,7 +77,7 @@ class MockServerInstance {
     this.users = generateMockUsers();
     this.systemAccounts = generateSystemAccounts(this.deployedNodeCount);
     this.results = generateMockResults();
-    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: Math.floor(Math.random() * 50) }));
+    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data - ${i} `, txs: Math.floor(Math.random() * 50) }));
   }
 
   // --- Event Loop (Heartbeat) ---
@@ -97,9 +97,9 @@ class MockServerInstance {
       if (this.deployedNodeCount > 0 && Math.random() > 0.6) {
         const targetIdx = Math.floor(Math.random() * this.deployedNodeCount);
         const packet: PacketEvent = {
-          id: `pkt-${Date.now()}`,
+          id: `pkt - ${Date.now()} `,
           from: 'control-chain',
-          to: `datachain-${targetIdx}`,
+          to: `datachain - ${targetIdx} `,
           type: 'ibc_transfer',
           timestamp: Date.now()
         };
@@ -111,7 +111,7 @@ class MockServerInstance {
   private updateNodes() {
     if (this.nodes.length !== 2 + this.deployedNodeCount) {
       this.nodes = generateMockNodes(this.deployedNodeCount);
-      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: 0 }));
+      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data - ${i} `, txs: 0 }));
     }
 
     this.nodes = this.nodes.map(n => ({
@@ -151,12 +151,12 @@ class MockServerInstance {
   }
 
   // --- API Handlers ---
-  
+
   // Deployment
   async buildImage() {
-    return new Promise<{jobId: string}>(resolve => {
+    return new Promise<{ jobId: string }>(resolve => {
       setTimeout(() => {
-        const jobId = `build-${Date.now()}`;
+        const jobId = `build - ${Date.now()} `;
         this.startBuildJob(jobId);
         resolve({ jobId });
       }, 500);
@@ -175,10 +175,10 @@ class MockServerInstance {
     let step = 0;
     const interval = setInterval(() => {
       if (step >= logs.length) {
-        this.broadcast(`/ws/deployment/logs`, { jobId, type: 'complete' });
+        this.broadcast(`/ ws / deployment / logs`, { jobId, type: 'complete' });
         clearInterval(interval);
       } else {
-        this.broadcast(`/ws/deployment/logs`, { jobId, type: 'log', message: logs[step] });
+        this.broadcast(`/ ws / deployment / logs`, { jobId, type: 'log', message: logs[step] });
         step++;
       }
     }, 800);
@@ -186,31 +186,31 @@ class MockServerInstance {
 
   async scaleCluster(count: number) {
     return new Promise(resolve => {
-        setTimeout(() => {
-             this.deployedNodeCount = count;
-             resolve({ success: true });
-        }, 500);
+      setTimeout(() => {
+        this.deployedNodeCount = count;
+        resolve({ success: true });
+      }, 500);
     });
   }
 
   // Economy
   async getUsers() { return { users: [...this.users], system: [...this.systemAccounts] }; }
-  
+
   async createUser() {
     const newUser: UserAccount = {
-      id: `u${Date.now()}`,
-      address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)}`,
+      id: `u${Date.now()} `,
+      address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)} `,
       balance: 0,
       role: 'client',
-      name: `Client ${this.users.length}`
+      name: `Client ${this.users.length} `
     };
     this.users.push(newUser);
     return newUser;
   }
 
   async deleteUser(id: string) {
-      this.users = this.users.filter(u => u.id !== id);
-      return true;
+    this.users = this.users.filter(u => u.id !== id);
+    return true;
   }
 
   async faucet(targetId: string, amount: number) {
@@ -218,74 +218,74 @@ class MockServerInstance {
     if (!millionaire || millionaire.balance < amount) throw new Error("Pool Empty");
 
     let targetName = "";
-    
+
     // Update System Account
     millionaire.balance -= amount;
 
     // Update Target
     const user = this.users.find(u => u.id === targetId);
     if (user) {
-        user.balance += amount;
-        targetName = user.address;
+      user.balance += amount;
+      targetName = user.address;
     } else {
-        const sys = this.systemAccounts.find(s => s.id === targetId);
-        if (sys) {
-            sys.balance += amount;
-            targetName = sys.name;
-        }
+      const sys = this.systemAccounts.find(s => s.id === targetId);
+      if (sys) {
+        sys.balance += amount;
+        targetName = sys.name;
+      }
     }
     return { success: true, targetName };
   }
 
   // Experiment
   async runExperiment(scenarios: ExperimentScenario[]) {
-      const executionId = `exec-${Date.now()}`;
-      // Start async simulation
-      this.startExperimentSimulation(executionId, scenarios);
-      return { executionId };
+    const executionId = `exec - ${Date.now()} `;
+    // Start async simulation
+    this.startExperimentSimulation(executionId, scenarios);
+    return { executionId };
   }
 
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
-      // Simulate sequential execution
-      for (const scenario of scenarios) {
-          if (scenario.status !== 'READY') continue;
-          
-          this.broadcast(`/ws/experiment/progress`, { executionId, scenarioId: scenario.id, status: 'RUNNING', log: '[INFO] Initializing transaction batch...' });
-          await new Promise(r => setTimeout(r, 800));
-          
-          this.broadcast(`/ws/experiment/progress`, { executionId, scenarioId: scenario.id, log: '[INFO] Broadcast Tx: 0x3a...f1' });
-          await new Promise(r => setTimeout(r, 800));
+    // Simulate sequential execution
+    for (const scenario of scenarios) {
+      if (scenario.status !== 'READY') continue;
 
-          const success = Math.random() > 0.15;
-          const status = success ? 'COMPLETE' : 'FAIL';
-          const log = success ? '[SUCCESS] Data commited to block.' : '[ERROR] Consensus timeout.';
-          
-          this.broadcast(`/ws/experiment/progress`, { executionId, scenarioId: scenario.id, status, log });
-          
-          if (success) {
-              // Save result
-               this.results.unshift({
-                  id: `res-${scenario.uniqueId}`,
-                  scenarioName: `Auto Execution #${scenario.id}`,
-                  executedAt: new Date().toISOString(),
-                  status: 'SUCCESS',
-                  dataSizeMB: scenario.dataSize,
-                  chunkSizeKB: scenario.chunkSize,
-                  totalTxCount: Math.floor((scenario.dataSize * 1024) / scenario.chunkSize),
-                  allocator: scenario.allocator,
-                  transmitter: scenario.transmitter,
-                  targetChainCount: scenario.chains,
-                  usedChains: scenario.targetChains,
-                  uploadTimeMs: 1234,
-                  downloadTimeMs: 567,
-                  throughputBps: 1000000,
-                  logs: scenario.logs
-               });
-          }
+      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, status: 'RUNNING', log: '[INFO] Initializing transaction batch...' });
+      await new Promise(r => setTimeout(r, 800));
+
+      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, log: '[INFO] Broadcast Tx: 0x3a...f1' });
+      await new Promise(r => setTimeout(r, 800));
+
+      const success = Math.random() > 0.15;
+      const status = success ? 'COMPLETE' : 'FAIL';
+      const log = success ? '[SUCCESS] Data commited to block.' : '[ERROR] Consensus timeout.';
+
+      this.broadcast(`/ ws / experiment / progress`, { executionId, scenarioId: scenario.id, status, log });
+
+      if (success) {
+        // Save result
+        this.results.unshift({
+          id: `res - ${scenario.uniqueId} `,
+          scenarioName: `Auto Execution #${scenario.id} `,
+          executedAt: new Date().toISOString(),
+          status: 'SUCCESS',
+          dataSizeMB: scenario.dataSize,
+          chunkSizeKB: scenario.chunkSize,
+          totalTxCount: Math.floor((scenario.dataSize * 1024) / scenario.chunkSize),
+          allocator: scenario.allocator,
+          transmitter: scenario.transmitter,
+          targetChainCount: scenario.chains,
+          usedChains: scenario.targetChains,
+          uploadTimeMs: 1234,
+          downloadTimeMs: 567,
+          throughputBps: 1000000,
+          logs: scenario.logs
+        });
       }
-      this.broadcast(`/ws/experiment/progress`, { executionId, type: 'ALL_COMPLETE' });
+    }
+    this.broadcast(`/ ws / experiment / progress`, { executionId, type: 'ALL_COMPLETE' });
   }
-  
+
   async getResults() { return this.results; }
   async deleteResult(id: string) { this.results = this.results.filter(r => r.id !== id); return true; }
 }

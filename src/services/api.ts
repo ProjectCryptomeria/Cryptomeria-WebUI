@@ -2,7 +2,7 @@ import { ExperimentConfig, ExperimentScenario } from '../types';
 import { MockServer } from './mockBackend';
 
 // 擬似的な非同期遅延を作成するヘルパー
-const delay = <T>(ms: number, result: T): Promise<T> => 
+const delay = <T>(ms: number, result: T): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(result), ms));
 
 export const api = {
@@ -61,8 +61,8 @@ export const api = {
       return MockServer.getResults();
     },
     deleteResult: async (id: string) => {
-       await delay(200, null);
-       return MockServer.deleteResult(id);
+      await delay(200, null);
+      return MockServer.deleteResult(id);
     }
   },
 };
