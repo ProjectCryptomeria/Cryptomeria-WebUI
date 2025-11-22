@@ -1,68 +1,89 @@
 import { ExperimentConfig, ExperimentScenario } from '../types';
-import { MockServer } from './mockBackend';
 
-// 擬似的な非同期遅延を作成するヘルパー
-const delay = <T>(ms: number, result: T): Promise<T> =>
-  new Promise(resolve => setTimeout(() => resolve(result), ms));
-
+/**
+ * API Client
+ * 
+ * すべてのバックエンドAPIへのリクエストを管理します。
+ * 実際のAPIとの統合時は、MSWを無効化するだけで切り替え可能です。
+ */
 export const api = {
   deployment: {
     build: async () => {
-      await delay(500, null);
-      return MockServer.buildImage();
+      const response = await fetch('/api/deployment/build', { method: 'POST' });
+      if (!response.ok) throw new Error('Build failed');
+      return response.json();
     },
     scale: async (replicaCount: number) => {
-      await delay(500, null);
-      // MockServer自体が内部で遅延を持っている場合は二重になりますが、許容範囲です
-      await MockServer.scaleCluster(replicaCount);
-      return { status: 'accepted' };
+      const response = await fetch('/api/deployment/scale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replicaCount })
+      });
+      if (!response.ok) throw new Error('Scale failed');
+      return response.json();
     },
     reset: async () => {
-      await delay(300, null);
-      await MockServer.scaleCluster(0);
-      return { success: true };
+      const response = await fetch('/api/deployment/reset', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Reset failed');
+      return response.json();
     }
   },
   economy: {
     getUsers: async () => {
-      await delay(200, null);
-      return MockServer.getUsers();
+      const response = await fetch('/api/economy/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
     },
     createUser: async () => {
-      await delay(300, null);
-      return MockServer.createUser();
+      const response = await fetch('/api/economy/user', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to create user');
+      return response.json();
     },
     deleteUser: async (id: string) => {
-      await delay(300, null);
-      return MockServer.deleteUser(id);
+      const response = await fetch(`/api/economy/user/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete user');
+      return response.json();
     },
     faucet: async (targetId: string, amount?: number) => {
-      await delay(300, null);
-      return MockServer.faucet(targetId, amount || 100);
-    },
+      const response = await fetch('/api/economy/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId, amount })
+      });
+      if (!response.ok) throw new Error('Faucet failed');
+      return response.json();
+    }
   },
   experiment: {
     estimate: async (config: ExperimentConfig) => {
-      await delay(200, null);
-      // 簡易試算ロジック (ハンドラーから移植)
-      const sizeMB = config.virtualConfig?.sizeMB || (config.realConfig?.totalSizeMB || 0);
-      const chainCount = config.targetChains?.length || 1;
-      const cost = sizeMB * 0.5 + chainCount * 10;
-      return { cost, isBudgetSufficient: true };
+      const response = await fetch('/api/experiment/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      if (!response.ok) throw new Error('Estimate failed');
+      return response.json();
     },
     run: async (scenarios: ExperimentScenario[]) => {
-      await delay(200, null);
-      return MockServer.runExperiment(scenarios);
-    },
+      const response = await fetch('/api/experiment/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarios })
+      });
+      if (!response.ok) throw new Error('Experiment run failed');
+      return response.json();
+    }
   },
   library: {
     getResults: async () => {
-      await delay(200, null);
-      return MockServer.getResults();
+      const response = await fetch('/api/library/results');
+      if (!response.ok) throw new Error('Failed to fetch results');
+      return response.json();
     },
     deleteResult: async (id: string) => {
-      await delay(200, null);
-      return MockServer.deleteResult(id);
+      const response = await fetch(`/api/library/results/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete result');
+      return response.json();
     }
-  },
+  }
 };

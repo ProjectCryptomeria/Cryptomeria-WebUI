@@ -5,7 +5,8 @@ import { NodeStatus, MonitoringUpdate, MempoolInfo } from '../../types';
 import { Activity, Zap, ChevronUp, ChevronLeft, X, Monitor } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { useResizerPanel, useWebSocket } from '../../hooks';
+import { useResizerPanel } from '../../hooks/useResizerPanel';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 interface MonitoringLayerProps {
     setDeployedNodeCount: (n: number) => void;

@@ -8,7 +8,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TableStyles } from '../../components/ui/Table';
-import { useTableFilterSort } from '../../hooks';
+import { useTableFilterSort } from './hooks/useTableFilterSort';
 
 interface LibraryLayerProps {
     results: ExperimentResult[];

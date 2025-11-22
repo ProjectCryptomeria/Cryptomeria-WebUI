@@ -5,7 +5,9 @@ import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { LogViewer } from '../../components/ui/LogViewer';
 import { Badge } from '../../components/ui/Badge';
-import { useResizerPanel, useFileUploadTree, useScenarioExecution } from '../../hooks';
+import { useResizerPanel } from '../../hooks/useResizerPanel';
+import { useFileUploadTree } from './hooks/useFileUploadTree';
+import { useScenarioExecution } from './hooks/useScenarioExecution';
 
 interface ExperimentLayerProps {
     users: UserAccount[];

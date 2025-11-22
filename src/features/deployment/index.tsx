@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
-import { useDeploymentControl } from '../../hooks';
+import { useDeploymentControl } from './hooks/useDeploymentControl';
 
 interface DeploymentLayerProps {
     setDeployedNodeCount: (count: number) => void;

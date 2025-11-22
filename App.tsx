@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { AppLayer, ExperimentResult, ExperimentConfig, ExperimentPreset } from './src/types';
-import { generateMockPresets } from './src/services/mockData';
+import { generateMockPresets } from './src/backend_mock/mockData';
 import MonitoringLayer from './src/features/monitoring';
 import DeploymentLayer from './src/features/deployment';
 import EconomyLayer from './src/features/economy';
 import ExperimentLayer from './src/features/experiment';
 import LibraryLayer from './src/features/library';
 import PresetLayer from './src/features/preset';
-import { useEconomyManagement, useNotification } from './src/hooks';
+import { useNotification } from './src/hooks/useNotification';
+import { useEconomyManagement } from './src/features/economy/hooks/useEconomyManagement';
 import { api } from './src/services/api';
 import { MainLayout } from './src/components/layout/MainLayout';
 
