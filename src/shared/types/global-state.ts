@@ -5,7 +5,7 @@ import type { Toast, NotificationItem } from './index';
 import type { UserAccount, SystemAccount } from '../../entities/account';
 import type { ExperimentResult } from '../../entities/result';
 import type { ExperimentPreset } from '../../entities/preset';
-import type { ExperimentScenario, ExperimentConfig } from '../../entities/scenario';
+import type { ExperimentScenario, ExperimentConfig, ScenarioStatus, ExecutionResultDetails } from '../../entities/scenario'; // 必要な型をインポート
 
 export interface GlobalState {
 	// Monitoring / Deployment
@@ -28,6 +28,8 @@ export interface GlobalState {
 	setIsNotificationOpen: (isOpen: boolean) => void;
 	addToast: (type: Toast['type'], title: string, message: string) => void;
 	clearNotifications: () => void;
+	// ★ 追加: トーストをIDで削除するアクション
+	removeToast: (id: string) => void;
 
 	// Economy
 	users: UserAccount[];
@@ -36,6 +38,8 @@ export interface GlobalState {
 	createUser: () => Promise<void>;
 	deleteUser: (id: string) => Promise<void>;
 	faucet: (targetId: string) => Promise<void>;
+	// ★ 追加: ユーザー残高を直接更新するアクション
+	updateUserBalance: (userId: string, newBalance: number) => void;
 
 	// Library / Presets
 	results: ExperimentResult[];
@@ -58,5 +62,13 @@ export interface GlobalState {
 		reprocessCondition: (id: number) => void;
 		removeScenario: (id: number) => void;
 		clearAllScenarios: () => void;
+		// ★ 追加: 新しい実行進捗アクションの型定義
+		updateScenario: (
+			id: string,
+			updates: Partial<ExperimentScenario> & { log?: string; resultDetails?: ExecutionResultDetails & { result?: ExperimentResult } },
+			isComplete?: boolean
+		) => void;
+		// ★ 追加: 実行状態更新アクションの型定義
+		updateExecutionStatus: (running: boolean, executionId?: string | null) => void;
 	};
 }

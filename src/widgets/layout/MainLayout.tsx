@@ -19,7 +19,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   setActiveLayer,
   onLogClick,
 }) => {
-  const { toasts, execution, baseFeeInfo } = useGlobalStore();
+  // ★ 修正: removeToast も取得する
+  const { toasts, execution, baseFeeInfo, removeToast } = useGlobalStore();
 
   const isExecutionRunning = execution.isExecutionRunning;
 
@@ -43,6 +44,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             {toasts.map(toast => (
               <div
                 key={toast.id}
+                // ★ 追加: クリック時にトーストを削除するハンドラ
+                onClick={() => removeToast(toast.id)}
                 className={`
                   pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border animate-in slide-in-from-right-5 fade-in duration-300
                   ${

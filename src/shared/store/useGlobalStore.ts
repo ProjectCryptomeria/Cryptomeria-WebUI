@@ -38,6 +38,14 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 	notifications: [],
 	isNotificationOpen: false,
 	setIsNotificationOpen: (isOpen) => set({ isNotificationOpen: isOpen }),
+
+	// ★ 追加: トーストを削除するアクションの実装
+	removeToast: (id) => {
+		set((state) => ({
+			toasts: state.toasts.filter((t) => t.id !== id),
+		}));
+	},
+
 	addToast: (type, title, message) => {
 		const id = Math.random().toString(36).substr(2, 9);
 		const newNotification: NotificationItem = {
@@ -61,9 +69,8 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 
 		// Auto remove toast after 5 seconds
 		setTimeout(() => {
-			set((state) => ({
-				toasts: state.toasts.filter((t) => t.id !== id),
-			}));
+			// ★ 修正: removeToast アクションを呼び出すように変更
+			get().removeToast(id);
 		}, 5000);
 	},
 	clearNotifications: () => set({ notifications: [] }),
@@ -107,16 +114,32 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 		}
 	},
 
+	// ★ 追加: 特定のユーザーの残高を更新するアクション
+	updateUserBalance: (userId, newBalance) => {
+		set(state => ({
+			users: state.users.map(u =>
+				u.id === userId ? { ...u, balance: newBalance } : u
+			)
+		}));
+	},
+
 	// --- Library / Presets ---
 	results: [],
 	presets: [],
+	// ★ 修正: loadData に Economy データ取得を追加（前々回の修正漏れ対応）
 	loadData: async () => {
 		try {
-			const [resResults, resPresets] = await Promise.all([
+			const [resResults, resPresets, resEconomy] = await Promise.all([
 				api.library.getResults(),
 				api.preset.getAll(),
+				api.economy.getUsers(), // ★ 追加: Economyデータ取得
 			]);
-			set({ results: resResults, presets: resPresets });
+			set({
+				results: resResults,
+				presets: resPresets,
+				users: resEconomy.users,         // ★ 追加: usersの更新
+				systemAccounts: resEconomy.system // ★ 追加: systemAccountsの更新
+			});
 		} catch (e) {
 			console.error('Failed to load initial data', e);
 		}
@@ -174,6 +197,89 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 		isGenerating: false,
 		isExecutionRunning: false,
 		executionId: null,
+
+		// ★ 追加/修正: シナリオの状態とログ、および実行完了時の処理（通知/残高更新）
+		updateScenario: (id, updates, isComplete = false) => {
+			const { addToast, registerResult, updateUserBalance } = get();
+
+			set((state) => ({
+				execution: {
+					...state.execution,
+					scenarios: state.execution.scenarios.map((s) => {
+						if (s.uniqueId === id) {
+							const newStatus = updates.status || s.status;
+							const newLog = updates.log ? [...s.logs, updates.log] : s.logs;
+
+							// 実行完了時: 結果を登録し、通知を出す
+							if (isComplete && (newStatus === 'COMPLETE' || newStatus === 'FAIL')) {
+								const details = updates.resultDetails;
+								let toastTitle = '';
+								let toastMessage = '';
+
+								if (details) {
+									const actualCost = details.actualCost.toFixed(2);
+									const refund = details.refund.toFixed(2);
+									const currentBalance = details.currentBalance.toFixed(2);
+									const userName = details.userName || 'Unknown User';
+
+									// ★ 修正: 通知タイトルにシナリオIDとユニークIDの一部を追加
+									if (newStatus === 'COMPLETE') {
+										toastTitle = `シナリオ #${s.id} 結果 (${s.uniqueId.substring(0, 8)}...)`;
+										// ★ 修正: 通知メッセージにアカウント名、費用、残高を追加
+										toastMessage = `アカウント: ${userName} | 費用: ${actualCost} TKN (返金: ${refund} TKN) | 残高: ${currentBalance} TKN`;
+										if (details.result) {
+											registerResult(details.result);
+										}
+									} else {
+										toastTitle = `シナリオ #${s.id} エラー (${s.uniqueId.substring(0, 8)}...)`;
+										// ★ 修正: 通知メッセージにアカウント名、費用、残高を追加
+										toastMessage = `アカウント: ${userName} | 費用: ${actualCost} TKN (返金: ${refund} TKN) | 残高: ${currentBalance} TKN`;
+									}
+
+									// ★ 追加: ユーザー残高を更新する (画面上のリアルタイム更新のため)
+									updateUserBalance(details.userId, details.currentBalance);
+								} else {
+									// Fallback
+									toastTitle = newStatus === 'COMPLETE' ? '実行完了' : '実行失敗';
+									toastMessage = `シナリオ #${s.id} が${toastTitle}しました。`;
+								}
+
+								addToast(newStatus === 'COMPLETE' ? 'success' : 'error', toastTitle, toastMessage);
+
+								// 実行キューのログを更新するために、ログをここで保持する
+								return {
+									...s,
+									status: newStatus,
+									logs: newLog,
+									failReason: updates.failReason || s.failReason,
+									cost: updates.resultDetails?.actualCost || s.cost,
+								} as ExperimentScenario; // 型推論を ExperimentScenario に固定
+							}
+
+							return {
+								...s,
+								...updates,
+								logs: newLog,
+								status: newStatus,
+							} as ExperimentScenario; // 型推論を ExperimentScenario に固定
+						}
+						return s;
+					}),
+					// isExecutionRunning の状態は updateExecutionStatus で別途管理
+				}
+			}));
+		},
+
+		// ★ 追加: 実行状態をまとめて管理するためのアクション
+		updateExecutionStatus: (running, executionId = null) => {
+			set(state => ({
+				execution: {
+					...state.execution,
+					isExecutionRunning: running,
+					executionId: executionId,
+				}
+			}))
+		},
 
 		generateScenarios: async (params) => {
 			const { addToast } = get();
@@ -271,63 +377,30 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 			);
 
 			// Start estimation sequence
-			// Note: We need to access the store again to get the latest state if needed, 
-			// but here we pass the new scenarios directly.
-			// We also need to access users to check balance.
-			// The original code passed users as argument. Here we can get it from store.
-
-			// We need to define runEstimationSequence inside or outside. 
-			// Since it's complex and uses `set`, let's define a helper or put it here.
-			// For simplicity, I'll implement the logic here or call a private helper.
-			// But `runEstimationSequence` was recursive/looping and updated state.
-
-			// To avoid huge function, let's call a helper that we attach to the store or just inline it.
-			// Since `runEstimationSequence` is not exposed in the interface, we can inline it or make it a local function.
-
-			// However, `runEstimationSequence` needs to update the store state (scenarios).
-			// We can use `get().execution.recalculateAll` logic if we make it reusable.
-
-			// Let's just call the logic directly here.
 			const { users } = get();
-			// We need to pass users from params if they are not yet in store? 
-			// The original code passed `params.users`. 
-			// But `users` should be in global store now.
-
 			await get().execution.recalculateAll(users);
 		},
 
 		executeScenarios: async (projectName) => {
 			const { addToast, execution } = get();
-			set((state) => ({ execution: { ...state.execution, isExecutionRunning: true } }));
+			// updateExecutionStatus を使用
+			get().execution.updateExecutionStatus(true);
 			addToast('info', '実行開始', 'シナリオを順次実行します。');
 
 			const readyScenarios = execution.scenarios.filter((s) => s.status === 'READY');
 			try {
 				const res = await api.experiment.run(readyScenarios);
-				set((state) => ({ execution: { ...state.execution, executionId: res.executionId } }));
+				// updateExecutionStatus を使用
+				get().execution.updateExecutionStatus(true, res.executionId);
 			} catch (e) {
 				addToast('error', '実行エラー', 'シナリオの実行開始に失敗しました。');
-				set((state) => ({ execution: { ...state.execution, isExecutionRunning: false } }));
+				// updateExecutionStatus を使用
+				get().execution.updateExecutionStatus(false);
 			}
 		},
 
 		recalculateAll: async (users) => {
 			const { addToast } = get();
-			// Reset statuses if needed (logic from handleRecalculateAll)
-			// But if called from generateScenarios, they are already PENDING.
-			// If called explicitly, we reset them.
-
-			// We need to know if we are just starting or restarting.
-			// The original `handleRecalculateAll` reset everything.
-			// `generateScenarios` created them as PENDING.
-
-			// Let's assume this function handles the estimation loop for whatever is in `scenarios`.
-			// But we should probably reset them to PENDING if they are not.
-
-			// Actually, `generateScenarios` calls `runEstimationSequence`.
-			// `handleRecalculateAll` resets then calls `runEstimationSequence`.
-
-			// Let's implement the loop logic here.
 
 			const userBalances: { [key: string]: number } = {};
 			users.forEach((u: any) => {
@@ -347,27 +420,21 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 			};
 
 			const { execution } = get();
-			const targetScenarios = execution.scenarios; // These should be the ones to estimate
+
+			// ★ 修正点: 処理対象のシナリオを、PENDING (初回生成) または FAIL (再試算対象) のみに限定する
+			let targetScenarios = execution.scenarios.filter(s => s.status === 'PENDING' || s.status === 'FAIL');
+
+			if (targetScenarios.length === 0) {
+				// 再試算対象がなければ何もしない
+				return;
+			}
 
 			let abort = false;
 
 			for (const scenario of targetScenarios) {
 				if (abort) break;
 
-				// Skip if already calculated? Original code didn't skip, it iterated all passed scenarios.
-				// But `handleRecalculateAll` passed "resetScenarios".
-				// `generateScenarios` passed "newScenarios".
-
-				// So we should iterate over current scenarios in store.
-
-				// Check if we need to reset status first?
-				// If the status is not PENDING/CALCULATING, maybe we should skip?
-				// Original logic:
-				// generateScenarios -> creates PENDING scenarios -> runEstimationSequence
-				// handleRecalculateAll -> resets all to PENDING -> runEstimationSequence
-
-				// So if we are here, we assume scenarios are ready to be estimated.
-
+				// PENDING/FAIL のシナリオを CALCULATING に設定して処理を開始
 				updateStatus(scenario.id, 'CALCULATING');
 
 				try {
@@ -386,6 +453,7 @@ export const useGlobalStore = create<GlobalStore>((set, get) => ({
 						addToast('error', '試算中断', `シナリオ #${scenario.id} で資金不足が発生しました。`);
 						break;
 					} else {
+						// 成功したら、そのコストを一旦ユーザーの仮想残高から引く (次のシナリオの残高チェックに影響するため)
 						userBalances[scenario.userId] -= estimatedCost;
 						updateStatus(scenario.id, 'READY', estimatedCost);
 					}

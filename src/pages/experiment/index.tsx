@@ -42,8 +42,8 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ onLogClick }) => {
   // --- Custom Hooks ---
   const config = useExperimentConfig();
 
-  // Bottom Panel Resizer (初期高さ 450px)
-  const bottomPanel = useResizerPanel(450, 100, 0.8);
+  // Bottom Panel Resizer (初期高さ 550px)
+  const bottomPanel = useResizerPanel(550, 100, 0.8);
 
   // --- Calculations ---
   const successCount = execution.scenarios.filter(c => ['COMPLETE'].includes(c.status)).length;
