@@ -1,5 +1,3 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/index.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   AllocatorStrategy,
@@ -10,18 +8,13 @@ import {
   ExperimentScenario,
   ExperimentResult,
 } from '../../types';
-// FolderOpen, FileCode は FileTreeViewer に移動したため削除
 import {
   Settings2,
   Box,
   Upload,
   Zap,
-  List,
   CheckCircle2,
   AlertCircle,
-  PlayCircle,
-  Save,
-  RotateCcw,
   Loader2,
   X,
   ChevronDown,
@@ -29,24 +22,19 @@ import {
   ChevronUp,
   Lock,
   ArrowLeft,
-  Bookmark,
   CheckCircle,
-  Folder,
   Clock,
-  Database,
-  Puzzle,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { LogViewer } from '../../components/ui/LogViewer';
-import { Badge } from '../../components/ui/Badge';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
 import { useFileUploadTree } from './hooks/useFileUploadTree';
 import { useScenarioExecution } from './hooks/useScenarioExecution';
-import { BottomPanel } from '../../components/ui/BottomPanel';
-import { FileTreeViewer } from './components/FileTreeViewer'; // 型定義もインポート
+import { FileTreeViewer } from './components/FileTreeViewer';
+import { PresetSidePanel } from './components/PresetSidePanel'; // 1. 追加
+import { ResultsBottomPanel } from './components/ResultsBottomPanel'; // 2. 追加
 
-// ... (ExperimentLayerProps, getStrategyBadge, RangeInput, StrategyCard は変更なし) ...
 interface ExperimentLayerProps {
   users: UserAccount[];
   presets: ExperimentPreset[];
@@ -57,33 +45,7 @@ interface ExperimentLayerProps {
   notify: (type: 'success' | 'error', title: string, message: string) => void;
 }
 
-const getStrategyBadge = (type: 'allocator' | 'transmitter', value: string) => {
-  let label = value;
-  let colorClass = 'bg-slate-100 text-slate-600';
-
-  if (type === 'allocator') {
-    colorClass = 'bg-blue-50 text-blue-700 border border-blue-100';
-    if (value === AllocatorStrategy.ROUND_ROBIN) label = 'RR';
-    else if (value === AllocatorStrategy.AVAILABLE)
-      label = 'LB'; // Load Balance
-    else if (value === AllocatorStrategy.RANDOM) label = 'RND';
-    else if (value === AllocatorStrategy.STATIC) label = 'FIX';
-    else if (value === AllocatorStrategy.HASH) label = 'HASH';
-  } else {
-    colorClass = 'bg-purple-50 text-purple-700 border border-purple-100';
-    if (value === TransmitterStrategy.ONE_BY_ONE) label = '1by1';
-    else if (value === TransmitterStrategy.MULTI_BURST) label = 'Push';
-  }
-
-  return (
-    <span
-      className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center justify-center ${colorClass}`}
-    >
-      {label}
-    </span>
-  );
-};
-
+// RangeInput, StrategyCard は ExperimentLayer のローカルに残す（他のコンポーネントでは使われないため）
 const RangeInput: React.FC<{
   label: string;
   type: 'data-size' | 'chunk-size';
@@ -97,7 +59,6 @@ const RangeInput: React.FC<{
   onToggleRange: () => void;
 }> = ({
   label,
-  type,
   fixedValue,
   rangeParams,
   isRange,
@@ -108,14 +69,18 @@ const RangeInput: React.FC<{
   onToggleRange,
 }) => (
   <div
-    className={`bg-gray-50 p-5 rounded-2xl border transition-colors hover:border-primary-indigo/30 ${disabled ? 'border-orange-200 bg-orange-50' : 'border-gray-200'}`}
+    className={`bg-gray-50 p-5 rounded-2xl border transition-colors hover:border-primary-indigo/30 ${
+      disabled ? 'border-orange-200 bg-orange-50' : 'border-gray-200'
+    }`}
   >
     <div className="flex items-center justify-between mb-4">
       <label className="font-bold text-gray-700 text-base">
         {label} ({unit})
       </label>
       <label
-        className={`inline-flex items-center text-xs cursor-pointer bg-white px-2 py-1 rounded border border-gray-200 shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`inline-flex items-center text-xs cursor-pointer bg-white px-2 py-1 rounded border border-gray-200 shadow-sm ${
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
         <input
           type="checkbox"
@@ -169,7 +134,9 @@ const StrategyCard: React.FC<{
 }> = ({ label, description, selected, onClick }) => (
   <div
     onClick={onClick}
-    className={`rounded-2xl p-5 relative bg-white cursor-pointer border-2 transition-all duration-200 ${selected ? 'border-primary-indigo bg-indigo-50/30' : 'border-gray-200 hover:border-indigo-200'}`}
+    className={`rounded-2xl p-5 relative bg-white cursor-pointer border-2 transition-all duration-200 ${
+      selected ? 'border-primary-indigo bg-indigo-50/30' : 'border-gray-200 hover:border-indigo-200'
+    }`}
   >
     <div className="flex justify-between items-start">
       <div>
@@ -194,18 +161,17 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   onDeletePreset,
   notify,
 }) => {
-  // ... (State定義、Hooks呼び出しなどは変更なし) ...
   const [mode, setMode] = useState<'virtual' | 'upload'>('virtual');
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
+
+  // ボトムパネル用Hooks
   const {
     isOpen: isResultsPanelOpen,
     setIsOpen: setIsResultsPanelOpen,
     height: panelHeight,
     panelRef,
     resizerRef,
-    isDragging,
-    isTransitioning,
   } = useResizerPanel(320, 100, 0.8);
 
   const [projectName, setProjectName] = useState('複合パラメータテスト');
@@ -234,6 +200,17 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   );
 
   const { uploadStats, setUploadStats, fileInputRef, processFiles } = useFileUploadTree(notify);
+
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+
+  // ファイルツリーが表示されたら自動でスクロール
+  useEffect(() => {
+    if (uploadStats.tree && treeContainerRef.current) {
+      setTimeout(() => {
+        treeContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [uploadStats.tree]);
 
   const handleFileProcess = async (files: File[]) => {
     const sizeMB = await processFiles(files);
@@ -283,8 +260,6 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
     }
     if (users.length > 0 && !selectedUserId) setSelectedUserId(users[0].id);
   }, [deployedNodeCount, users]);
-
-  // renderTreeNodes 関数は削除 (FileTreeViewer に移行)
 
   const handleSave = () => {
     if (!newPresetName) {
@@ -370,10 +345,9 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
         <div className="flex-1 flex flex-col h-full min-w-0 relative z-10">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-32">
             <div className="space-y-6">
-              {/* ... (基本設定セクション) ... */}
+              {/* --- 基本設定セクション --- */}
               <Card className="overflow-hidden rounded-3xl shadow-soft border-gray-100">
                 <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                  {/* ... (ヘッダー) ... */}
                   <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mr-3 text-primary-indigo">
                       <Settings2 className="w-5 h-5" />
@@ -456,7 +430,10 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                       </div>
 
                       {uploadStats.tree && (
-                        <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ring-4 ring-gray-50 transition-all duration-300">
+                        <div
+                          ref={treeContainerRef}
+                          className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ring-4 ring-gray-50 transition-all duration-300"
+                        >
                           <div
                             className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => setUploadStats(p => ({ ...p, treeOpen: !p.treeOpen }))}
@@ -480,7 +457,6 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                             className={`transition-max-height duration-300 ease-in-out overflow-hidden ${uploadStats.treeOpen ? 'max-h-80' : 'max-h-0'}`}
                           >
                             <div className="p-4 pt-0 font-sans overflow-y-auto max-h-80 custom-scrollbar">
-                              {/* コンポーネントを使用 */}
                               <FileTreeViewer tree={uploadStats.tree} />
                             </div>
                           </div>
@@ -491,9 +467,8 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                 </div>
               </Card>
 
-              {/* ... (パラメータ設定、ボトムパネルなどは変更なし) ... */}
+              {/* --- パラメータ設定セクション --- */}
               <Card className="rounded-3xl shadow-soft border-gray-100">
-                {/* ... */}
                 <div className="bg-white px-6 py-5 border-b border-gray-100">
                   <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3 text-primary-green">
@@ -503,7 +478,6 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                   </h2>
                 </div>
                 <div className="p-6 space-y-8">
-                  {/* ... (フォームコンテンツ) ... */}
                   {/* Project & Account */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -774,332 +748,53 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                 </div>
               </Card>
 
-              {/* Explicit Spacer to prevent bottom panel overlap */}
+              {/* Spacer */}
               <div className="h-[50px] w-full pointer-events-none" aria-hidden="true" />
             </div>
           </div>
 
-          {/* Results Panel (Fixed Bottom) */}
-          <BottomPanel
+          {/* --- Results Panel (Fixed Bottom) --- */}
+          <ResultsBottomPanel
             isOpen={isResultsPanelOpen}
             setIsOpen={setIsResultsPanelOpen}
             height={panelHeight}
             panelRef={panelRef}
             resizerRef={resizerRef}
-            title={
-              <>
-                生成結果
-                <span className="ml-3 bg-primary-indigo text-white text-sm font-bold px-2.5 py-0.5 rounded-full shadow-sm shadow-indigo-200">
-                  {scenarios.length}
-                </span>
-              </>
-            }
-            icon={List}
-            headerRight={
-              <div className="text-base text-gray-600 font-medium hidden sm:block">
-                総コスト試算:{' '}
-                <span className="font-mono font-bold text-gray-900 text-lg">{totalCost}</span> TKN
-              </div>
-            }
-          >
-            {/* ... (ボトムパネルの中身は変更なし) ... */}
-            {/* Status Bar & Execute */}
-            <div className="px-8 py-3 bg-indigo-50/50 border-b border-indigo-50 flex items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center space-x-8 text-sm">
-                <div className="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  <span className="font-bold text-lg">{successCount}</span>
-                  <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">Success</span>
-                </div>
-                <div className="h-6 w-px bg-gray-300"></div>
-                <div className="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
-                  <AlertCircle className="w-5 h-5 mr-2" />
-                  <span className="font-bold text-lg">{failCount}</span>
-                  <span className="text-xs text-red-700 font-bold ml-1.5 uppercase">Fail</span>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                {/* Bulk Recalculate Button */}
-                {failCount > 0 && (
-                  <button
-                    onClick={handleRecalculateAll}
-                    disabled={isExecutionRunning}
-                    className="bg-white border border-status-fail text-status-fail px-4 py-2.5 rounded-xl font-bold shadow-sm flex items-center hover:bg-red-50 transition-all"
-                  >
-                    <RotateCcw className="w-5 h-5 mr-2" />
-                    一括再試算
-                  </button>
-                )}
-                <button
-                  onClick={() => executeScenarios(projectName)}
-                  disabled={scenarios.length === 0 || isExecutionRunning || successCount === 0}
-                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm flex items-center disabled:opacity-50 data-[ready=true]:bg-primary-indigo data-[ready=true]:hover:bg-indigo-700 data-[ready=true]:hover:shadow-md transition-all transform active:scale-95"
-                  data-ready={successCount > 0 && !isExecutionRunning}
-                >
-                  {isExecutionRunning ? (
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  ) : (
-                    <PlayCircle className="w-5 h-5 mr-2" />
-                  )}
-                  実行
-                </button>
-              </div>
-            </div>
-
-            {/* Scenario List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-gray-50/50">
-              {scenarios.map(c => {
-                let border = 'border-l-4 border-gray-200';
-                let statusContent = null;
-                let bgClass = 'bg-white';
-
-                if (c.status === 'PENDING' || c.status === 'CALCULATING') {
-                  border = 'border-l-4 border-status-process';
-                  statusContent = (
-                    <div className="text-status-process font-bold flex items-center">
-                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> 試算中
-                    </div>
-                  );
-                } else if (c.status === 'RUNNING') {
-                  border = 'border-l-4 border-status-process';
-                  statusContent = (
-                    <div className="text-status-process font-bold flex items-center">
-                      <Settings2 className="w-4 h-4 animate-spin mr-1.5" /> 実行中
-                    </div>
-                  );
-                } else if (c.status === 'READY') {
-                  border = 'border-l-4 border-status-ready';
-                  statusContent = (
-                    <div className="text-status-ready font-bold flex items-center">
-                      <CheckCircle2 className="w-5 h-5 mr-1.5" /> {c.cost.toFixed(2)} TKN
-                    </div>
-                  );
-                } else if (c.status === 'COMPLETE') {
-                  border = 'border-l-4 border-status-success';
-                  statusContent = (
-                    <div className="text-status-success font-bold flex items-center">
-                      <CheckCircle2 className="w-5 h-5 mr-1.5" /> 完了
-                    </div>
-                  );
-                } else if (c.status === 'FAIL') {
-                  border = 'border-l-4 border-status-fail';
-                  bgClass = 'bg-red-50/30';
-                  statusContent = (
-                    <div className="flex items-center">
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setErrorModal({
-                            isOpen: true,
-                            id: c.uniqueId,
-                            reason: c.failReason || '',
-                          });
-                        }}
-                        className="text-status-fail font-bold hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center"
-                      >
-                        <AlertCircle className="w-5 h-5 mr-1.5" /> ERROR
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          reprocessCondition(c.id);
-                        }}
-                        className="ml-2 bg-white text-status-fail border border-status-fail hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-1.5" /> 再試算
-                      </button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={c.uniqueId}
-                    onClick={() => setLogModal({ isOpen: true, scenario: c })}
-                    className={`p-4 rounded-2xl shadow-sm ${border} ${bgClass} flex justify-between items-center animate-fade-in hover:shadow-md transition-all cursor-pointer mb-1`}
-                  >
-                    <div className="flex items-center space-x-5 flex-1">
-                      <div className="text-center w-10 shrink-0">
-                        <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">
-                          Seq
-                        </span>
-                        <span className="font-black text-gray-700 text-lg">{c.id}</span>
-                      </div>
-                      <div className="text-sm overflow-hidden">
-                        <div className="font-mono text-xs font-bold text-gray-400 truncate mb-1 opacity-70">
-                          {c.uniqueId}
-                        </div>
-                        <div className="font-bold text-gray-800 text-base">
-                          Size: {c.dataSize}MB / Chunk: {c.chunkSize}KB
-                        </div>
-                        <div className="text-gray-500 text-xs mt-1 font-medium flex gap-2">
-                          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">
-                            {c.allocator}
-                          </span>
-                          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">
-                            {c.transmitter}
-                          </span>
-                          <span className="text-gray-400">|</span>
-                          <span>Chains: {c.chains}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0 flex items-center">{statusContent}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </BottomPanel>
+            scenarios={scenarios}
+            totalCost={totalCost}
+            successCount={successCount}
+            failCount={failCount}
+            isExecutionRunning={isExecutionRunning}
+            onRecalculateAll={handleRecalculateAll}
+            onExecute={() => executeScenarios(projectName)}
+            onErrorClick={(id, reason) => setErrorModal({ isOpen: true, id, reason })}
+            onReprocess={reprocessCondition}
+            onLogClick={scenario => setLogModal({ isOpen: true, scenario })}
+          />
 
           {/* Sidebar Toggle Button */}
           <button
             onClick={() => setIsPresetPanelOpen(true)}
-            className={`absolute top-4 right-0 bg-white border border-gray-200 shadow-lg rounded-l-xl p-3 text-scenario-accent hover:bg-orange-50 transition-all z-20 ${isPresetPanelOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0'}`}
+            className={`absolute top-4 right-0 bg-white border border-gray-200 shadow-lg rounded-l-xl p-3 text-scenario-accent hover:bg-orange-50 transition-all z-20 ${
+              isPresetPanelOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0'
+            }`}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Sidebar (Preset Panel) - 変更なし */}
-        <div
-          className={`flex-shrink-0 border-l border-gray-200 bg-white relative z-20 transition-all duration-300 overflow-hidden ${isPresetPanelOpen ? 'w-96' : 'w-0'}`}
-        >
-          <aside className="h-full flex flex-col w-96">
-            {' '}
-            {/* Fixed inner width to prevent squashing content */}
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center shrink-0">
-              <h2 className="font-bold text-gray-700 flex items-center text-lg">
-                <Bookmark className="w-6 h-6 mr-2 text-scenario-accent" />
-                プリセットパネル
-              </h2>
-              <button
-                onClick={() => setIsPresetPanelOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            {/* Save Form */}
-            <div className="p-4 border-b border-gray-100 bg-gray-50/30 shrink-0">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newPresetName}
-                  onChange={e => setNewPresetName(e.target.value)}
-                  placeholder="設定名..."
-                  className="flex-1 border border-gray-200 bg-white rounded-xl px-4 py-2.5 text-sm focus:border-scenario-accent focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium"
-                />
-                <button
-                  onClick={handleSave}
-                  className="bg-scenario-accent hover:bg-orange-600 text-white rounded-xl px-3.5 py-2.5 shadow-md shadow-orange-100 transition-colors flex items-center justify-center min-w-[44px]"
-                >
-                  <Save className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-gray-50">
-              {presets.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                    <Folder className="w-8 h-8" />
-                  </div>
-                  <p className="text-sm text-gray-400 font-medium">
-                    保存されたプリセットはありません
-                  </p>
-                </div>
-              )}
-              {presets.map(s => {
-                // Extract strategy values for badges
-                const allocator = s.generatorState
-                  ? s.generatorState.allocators[0]
-                  : s.config.allocator;
-                const transmitter = s.generatorState
-                  ? s.generatorState.transmitters[0]
-                  : s.config.transmitter;
-                const dataSizeLabel = s.generatorState
-                  ? s.generatorState.dataSize.mode === 'range'
-                    ? `${s.generatorState.dataSize.start}MB`
-                    : `${s.generatorState.dataSize.fixed}MB`
-                  : `${s.config.virtualConfig?.sizeMB}MB`;
-                const chunkLabel = s.generatorState
-                  ? s.generatorState.chunkSize.mode === 'range'
-                    ? `Range`
-                    : `${s.generatorState.chunkSize.fixed}KB`
-                  : `${s.config.virtualConfig?.chunkSizeKB}KB`;
-
-                return (
-                  <div
-                    key={s.id}
-                    className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group relative cursor-default"
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <h3
-                        className="font-bold text-slate-800 text-lg truncate w-full pr-8"
-                        title={s.name}
-                      >
-                        {s.name}
-                      </h3>
-                      {onDeletePreset && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            onDeletePreset(s.id);
-                          }}
-                          className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full p-1 absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex items-center text-xs text-slate-400 mb-4 font-medium">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {new Date(s.lastModified).toLocaleString('ja-JP', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge
-                        color="blue"
-                        className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100"
-                      >
-                        <Database className="w-3 h-3" />
-                        {dataSizeLabel}
-                      </Badge>
-                      <Badge
-                        color="slate"
-                        className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-100"
-                      >
-                        <Puzzle className="w-3 h-3" />
-                        {chunkLabel}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-4">
-                      {getStrategyBadge('allocator', allocator)}
-                      {getStrategyBadge('transmitter', transmitter)}
-                    </div>
-
-                    <button
-                      onClick={() => loadPreset(s)}
-                      className="w-full bg-white border border-scenario-accent text-scenario-accent text-sm font-bold py-2.5 rounded-xl hover:bg-scenario-accent hover:text-white transition-all flex items-center justify-center group/btn"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2 group-hover/btn:rotate-180 transition-transform" />{' '}
-                      適用する
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-        </div>
+        {/* --- Sidebar (Preset Panel) --- */}
+        <PresetSidePanel
+          isOpen={isPresetPanelOpen}
+          onClose={() => setIsPresetPanelOpen(false)}
+          presets={presets}
+          newPresetName={newPresetName}
+          setNewPresetName={setNewPresetName}
+          onSave={handleSave}
+          onLoad={loadPreset}
+          onDelete={onDeletePreset}
+          deployedNodeCount={deployedNodeCount}
+        />
       </div>
 
       {/* Error Modal - 変更なし */}
@@ -1172,7 +867,9 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div
-              className={`h-3 rounded-full transition-all duration-300 shadow-sm ${logModal.scenario?.status === 'FAIL' ? 'bg-status-fail' : 'bg-primary-indigo'}`}
+              className={`h-3 rounded-full transition-all duration-300 shadow-sm ${
+                logModal.scenario?.status === 'FAIL' ? 'bg-status-fail' : 'bg-primary-indigo'
+              }`}
               style={{
                 width:
                   logModal.scenario?.status === 'COMPLETE'
