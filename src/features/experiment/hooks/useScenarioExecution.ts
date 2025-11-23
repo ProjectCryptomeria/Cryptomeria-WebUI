@@ -7,10 +7,10 @@ import {
 } from '../../../types';
 import { api } from '../../../services/api';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+import { ExperimentFormState } from '../utils/mappers';
 
 /**
  * 実験シナリオの生成と実行のためのHook
- * パラメータ範囲からシナリオを生成し、実行を管理します
  */
 export const useScenarioExecution = (
   notify: (type: 'success' | 'error', title: string, message: string) => void,
@@ -21,7 +21,6 @@ export const useScenarioExecution = (
   const [isExecutionRunning, setIsExecutionRunning] = useState(false);
   const [executionId, setExecutionId] = useState<string | null>(null);
 
-  // WebSocket for Experiment Progress
   useWebSocket<{
     executionId: string;
     scenarioId?: number;
@@ -53,23 +52,22 @@ export const useScenarioExecution = (
     );
   });
 
-  const generateScenarios = async (params: any) => {
+  const generateScenarios = async (params: ExperimentFormState & { users: any; setIsOpen: any }) => {
     setIsGenerating(true);
-    await new Promise(r => setTimeout(r, 500)); // Sim generation delay
+    await new Promise(r => setTimeout(r, 500));
 
     const newScenarios: ExperimentScenario[] = [];
     let idCounter = 1;
     const cleanName = params.projectName.replace(/[^a-zA-Z0-9_]/g, '') || 'Exp';
 
-    // Helper to generate range array
-    const getRange = (p: any) => {
-      if (p.mode === 'fixed') return [p.fixed];
+    const getRange = (p: { mode: string; fixed?: number; range?: any }) => {
+      if (p.mode === 'fixed') return [p.fixed!];
       const res = [];
       const start = Number(p.range.start);
       const end = Number(p.range.end);
       const step = Number(p.range.step);
 
-      if (step <= 0 || start > end) return [start]; // Fallback
+      if (step <= 0 || start > end) return [start];
       for (let i = start; i <= end; i += step) {
         res.push(i);
       }
@@ -78,33 +76,68 @@ export const useScenarioExecution = (
 
     const dataSizes = getRange(params.dataSizeParams);
     const chunkSizes = getRange(params.chunkSizeParams);
-    const allocators = Array.from(params.selectedAllocators as Set<AllocatorStrategy>);
-    const transmitters = Array.from(params.selectedTransmitters as Set<TransmitterStrategy>);
+    const allocators = Array.from(params.selectedAllocators);
+    const transmitters = Array.from(params.selectedTransmitters);
+
+    // --- Chain Selection Logic ---
+    // 固定モードでもRangeモードでも、まずは選択されたチェーンのリストを取得してソートする
+    const sortedSelectedChains = Array.from(params.selectedChains).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+
+    // 使用する「チェーン数」の配列を決定
+    let chainCounts: number[] = [];
+    if (params.chainMode === 'range') {
+      // Rangeモード: Step設定に基づいて台数配列を作る (例: 1, 2, 3...)
+      // ただし、選択されているチェーン数を超えないようにクランプする
+      const { start, end, step } = params.chainRangeParams;
+      const maxCount = sortedSelectedChains.length;
+
+      if (step > 0) {
+        for (let i = start; i <= end; i += step) {
+          if (i > 0 && i <= maxCount) {
+            chainCounts.push(i);
+          }
+        }
+      }
+      if (chainCounts.length === 0) chainCounts = [1]; // Fallback
+    } else {
+      // Fixedモード: 選択されたチェーン全てを使用する (1パターンのみ)
+      chainCounts = [sortedSelectedChains.length];
+    }
 
     // Cartesian Product Generation
-    // DataSize x ChunkSize x Allocators x Transmitters
     for (const ds of dataSizes) {
       for (const cs of chunkSizes) {
-        for (const alloc of allocators) {
-          for (const trans of transmitters) {
-            newScenarios.push({
-              id: idCounter++,
-              uniqueId: `${cleanName}_${Date.now()}_${idCounter}`,
-              dataSize: ds,
-              chunkSize: cs,
-              allocator: alloc,
-              transmitter: trans,
-              chains: params.selectedChains.size || 1,
-              targetChains: Array.from(params.selectedChains),
-              budgetLimit: 1000,
-              cost: parseFloat(
-                (ds * 0.5 + (alloc === AllocatorStrategy.AVAILABLE ? 5 : 0)).toFixed(2)
-              ),
-              status: 'READY',
-              failReason: null,
-              progress: 0,
-              logs: [],
-            });
+        for (const cCount of chainCounts) {
+          for (const alloc of allocators) {
+            for (const trans of transmitters) {
+
+              // 台数(cCount)に応じて、選択リストの先頭から切り出す
+              // 例: selected=[1,2,4], cCount=2 => [1,2]
+              const targets = sortedSelectedChains.slice(0, cCount);
+
+              if (targets.length === 0) continue;
+
+              newScenarios.push({
+                id: idCounter++,
+                uniqueId: `${cleanName}_${Date.now()}_${idCounter}`,
+                dataSize: ds,
+                chunkSize: cs,
+                allocator: alloc,
+                transmitter: trans,
+                chains: targets.length,
+                targetChains: targets, // 具体的なチェーンIDリストを保存
+                budgetLimit: 1000,
+                cost: parseFloat(
+                  (ds * 0.5 + (alloc === AllocatorStrategy.AVAILABLE ? 5 : 0)).toFixed(2)
+                ),
+                status: 'READY',
+                failReason: null,
+                progress: 0,
+                logs: [],
+              });
+            }
           }
         }
       }
@@ -116,7 +149,7 @@ export const useScenarioExecution = (
     notify(
       'success',
       'Scenarios Generated',
-      `${newScenarios.length} scenarios created based on parameter ranges.`
+      `${newScenarios.length} scenarios created.`
     );
   };
 

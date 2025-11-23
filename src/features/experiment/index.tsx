@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import {
+  ExperimentConfig,
   UserAccount,
   ExperimentPreset,
-  ExperimentConfig,
   ExperimentScenario,
   ExperimentResult,
 } from '../../types';
-import { ArrowLeft } from 'lucide-react';
+import { AlertCircle, Loader2, X, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
+import { LogViewer } from '../../components/ui/LogViewer';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
 import { useScenarioExecution } from './hooks/useScenarioExecution';
-import { useExperimentConfig } from './hooks/useExperimentConfig'; // 3. 追加
+import { useExperimentConfig } from './hooks/useExperimentConfig';
 
 // Components
 import { PresetSidePanel } from './components/PresetSidePanel';
 import { ResultsBottomPanel } from './components/ResultsBottomPanel';
 import { ExperimentConfigForm } from './components/ExperimentConfigForm';
-import { LogViewer } from '../../components/ui/LogViewer'; // LogModal内で使用
-import { CheckCircle, AlertCircle, Loader2, Clock, Settings2, X } from 'lucide-react'; // LogModal内で使用
 
 interface ExperimentLayerProps {
   users: UserAccount[];
@@ -69,9 +68,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
 
   // --- Handlers ---
 
-  // 「シナリオを作成」ボタン
   const handleGenerateClick = () => {
-    // Hookから現在の状態を取得して生成関数に渡す
     const state = config.getCurrentState();
     execution.generateScenarios({
       ...state,
@@ -80,13 +77,11 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
     });
   };
 
-  // プリセット保存ラッパー (UIの入力値をクリアする処理などを含める場合)
   const onSaveClick = () => {
     config.handleSavePreset(newPresetName);
     setNewPresetName('');
   };
 
-  // 統計情報 (Bottom Panel Header用)
   const successCount = execution.scenarios.filter(c =>
     ['READY', 'RUNNING', 'COMPLETE'].includes(c.status)
   ).length;
@@ -119,6 +114,12 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
               deployedNodeCount={deployedNodeCount}
               selectedChains={config.selectedChains}
               setSelectedChains={config.setSelectedChains}
+              // 追加・修正
+              nodes={config.nodes} // ノード情報を渡す
+              chainMode={config.chainMode}
+              setChainMode={config.setChainMode}
+              chainRangeParams={config.chainRangeParams}
+              setChainRangeParams={config.setChainRangeParams}
               selectedAllocators={config.selectedAllocators}
               setSelectedAllocators={config.setSelectedAllocators}
               selectedTransmitters={config.selectedTransmitters}

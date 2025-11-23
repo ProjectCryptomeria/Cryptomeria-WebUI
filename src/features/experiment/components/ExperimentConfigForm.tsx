@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { AllocatorStrategy, TransmitterStrategy, UserAccount } from '../../../types';
-import { Settings2, Box, Upload, Zap, Loader2, ChevronDown, Info, ChevronUp } from 'lucide-react';
+import { AllocatorStrategy, TransmitterStrategy, UserAccount, NodeStatus } from '../../../types';
+import { Settings2, Box, Upload, Zap, Info, Server, Loader2, ChevronDown } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { RangeInput } from './RangeInput';
 import { StrategyCard } from './StrategyCard';
+import { ChainSelector } from './ChainSelector';
 import { FileTreeViewer } from './FileTreeViewer';
 
 interface ExperimentConfigFormProps {
@@ -23,7 +24,7 @@ interface ExperimentConfigFormProps {
   setUploadStats: React.Dispatch<
     React.SetStateAction<{ count: number; sizeMB: number; tree: any; treeOpen: boolean }>
   >;
-  fileInputRef: React.RefObject<HTMLInputElement | null>; // 型修正
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileProcess: (files: File[]) => void;
 
   // Numeric Parameters
@@ -32,7 +33,7 @@ interface ExperimentConfigFormProps {
     fixed: number;
     range: { start: number; end: number; step: number };
   };
-  setDataSizeParams: React.Dispatch<React.SetStateAction<any>>; // 簡易化のためany許容だが本来は型定義すべき
+  setDataSizeParams: React.Dispatch<React.SetStateAction<any>>;
   chunkSizeParams: {
     mode: 'fixed' | 'range';
     fixed: number;
@@ -41,9 +42,14 @@ interface ExperimentConfigFormProps {
   setChunkSizeParams: React.Dispatch<React.SetStateAction<any>>;
 
   // Chain Selection
+  nodes: NodeStatus[];
   deployedNodeCount: number;
   selectedChains: Set<string>;
   setSelectedChains: (chains: Set<string>) => void;
+  chainMode: 'fixed' | 'range';
+  setChainMode: (mode: 'fixed' | 'range') => void;
+  chainRangeParams: { start: number; end: number; step: number };
+  setChainRangeParams: (params: any) => void;
 
   // Strategies
   selectedAllocators: Set<AllocatorStrategy>;
@@ -72,9 +78,14 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   setDataSizeParams,
   chunkSizeParams,
   setChunkSizeParams,
+  nodes,
   deployedNodeCount,
   selectedChains,
   setSelectedChains,
+  chainMode,
+  setChainMode,
+  chainRangeParams,
+  setChainRangeParams,
   selectedAllocators,
   setSelectedAllocators,
   selectedTransmitters,
@@ -82,16 +93,10 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   isGenerating,
   onGenerate,
 }) => {
-  // UI固有のローカルState
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
-  const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
-
   const selectedUser = users.find(u => u.id === selectedUserId);
-
-  // スクロール制御用のRef (ここに移動)
   const treeContainerRef = useRef<HTMLDivElement>(null);
 
-  // ファイルツリーが表示されたら自動でスクロール
   useEffect(() => {
     if (uploadStats.tree && treeContainerRef.current) {
       setTimeout(() => {
@@ -210,11 +215,6 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                       <span className="text-sm font-bold bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100">
                         {uploadStats.count} Files, {uploadStats.sizeMB} MB
                       </span>
-                      <ChevronUp
-                        className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
-                          uploadStats.treeOpen ? '' : 'rotate-180'
-                        }`}
-                      />
                     </div>
                   </div>
                   <div
@@ -261,50 +261,50 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
               <label className="block text-base font-bold text-gray-700 mb-2 ml-1">
                 実行アカウント
               </label>
-              <div
-                onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-                className="block w-full rounded-xl border border-gray-200 bg-white p-3.5 pr-8 cursor-pointer relative shadow-sm hover:border-primary-indigo transition-colors"
-              >
-                <span className="block truncate text-gray-700 font-medium">
-                  {selectedUser
-                    ? `${selectedUser.name} (${selectedUser.balance.toFixed(2)} TKN)`
-                    : 'アカウントを選択...'}
-                </span>
-                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
-                  <ChevronDown className="w-4 h-4" />
-                </div>
-              </div>
-              {isAccountDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-20 max-h-60 overflow-y-auto">
-                  {users.map(u => (
-                    <div
-                      key={u.id}
-                      onClick={() => {
-                        setSelectedUserId(u.id);
-                        setIsAccountDropdownOpen(false);
-                      }}
-                      className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                        selectedUserId === u.id ? 'bg-indigo-50 text-primary-indigo' : ''
-                      }`}
-                    >
-                      <div className="font-bold text-gray-800">{u.name}</div>
-                      <div className="text-xs font-mono text-gray-500 mt-0.5">
-                        {u.balance.toFixed(2)} TKN
+              <div className="relative">
+                <button
+                  onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
+                  className="w-full text-left bg-white border border-gray-200 rounded-xl p-3.5 flex justify-between items-center hover:border-primary-indigo transition-all shadow-sm"
+                >
+                  <span className="block truncate text-gray-700 font-medium">
+                    {selectedUser
+                      ? `${selectedUser.name} (${selectedUser.balance.toFixed(2)} TKN)`
+                      : 'アカウントを選択...'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+                {isAccountDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-20 max-h-60 overflow-y-auto">
+                    {users.map(u => (
+                      <div
+                        key={u.id}
+                        onClick={() => {
+                          setSelectedUserId(u.id);
+                          setIsAccountDropdownOpen(false);
+                        }}
+                        className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                          selectedUserId === u.id ? 'bg-indigo-50 text-primary-indigo' : ''
+                        }`}
+                      >
+                        <div className="font-bold text-gray-800">{u.name}</div>
+                        <div className="text-xs font-mono text-gray-500 mt-0.5">
+                          {u.balance.toFixed(2)} TKN
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <hr className="border-gray-100" />
 
-          {/* Numeric Parameters */}
+          {/* Numeric Parameters (2カラムに変更) */}
           <div>
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center ml-1">
               <div className="w-1 h-4 bg-gray-300 mr-2 rounded-full"></div> 数値設定
             </h3>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <RangeInput
                 label="データサイズ"
                 type="data-size"
@@ -342,75 +342,22 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                   }))
                 }
               />
-              {/* Datachain Selection */}
-              <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 transition-colors hover:border-primary-indigo/30">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="font-bold text-gray-700 text-base">Datachain</label>
-                  <span className="text-xs bg-primary-indigo text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
-                    {selectedChains.size}
-                  </span>
-                </div>
-                <div className="relative">
-                  <button
-                    onClick={() => setIsChainDropdownOpen(!isChainDropdownOpen)}
-                    className="w-full text-left bg-white border border-gray-200 rounded-lg p-2.5 text-sm flex justify-between items-center hover:bg-gray-50 shadow-sm"
-                  >
-                    <span className="text-gray-600 font-medium">チェーンを選択...</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  {isChainDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 ring-1 ring-black/5 rounded-xl shadow-xl z-20 p-3">
-                      <div className="flex justify-end space-x-3 mb-3 border-b border-gray-100 pb-2">
-                        <button
-                          onClick={() => {
-                            const all = new Set<string>();
-                            for (let i = 0; i < deployedNodeCount; i++) all.add(`datachain-${i}`);
-                            setSelectedChains(all);
-                          }}
-                          className="text-xs font-bold text-primary-indigo hover:bg-indigo-50 px-2 py-1 rounded"
-                        >
-                          All
-                        </button>
-                        <button
-                          onClick={() => setSelectedChains(new Set())}
-                          className="text-xs font-bold text-gray-500 hover:bg-gray-100 px-2 py-1 rounded"
-                        >
-                          None
-                        </button>
-                      </div>
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
-                        {Array.from({ length: deployedNodeCount }).map((_, i) => {
-                          const id = `datachain-${i}`;
-                          return (
-                            <label
-                              key={id}
-                              className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                            >
-                              <div className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedChains.has(id)}
-                                  onChange={() => {
-                                    const next = new Set(selectedChains);
-                                    next.has(id) ? next.delete(id) : next.add(id);
-                                    setSelectedChains(next);
-                                  }}
-                                  className="rounded text-primary-indigo w-4 h-4 focus:ring-0"
-                                />
-                                <span className="ml-3 text-sm font-bold text-gray-700">{id}</span>
-                              </div>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                Active
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
+
+            {/* Datachain Selection (別セクションとして配置) */}
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center ml-1">
+              <div className="w-1 h-4 bg-gray-300 mr-2 rounded-full"></div> Datachain設定
+            </h3>
+            <ChainSelector
+              nodes={nodes}
+              selectedChains={selectedChains}
+              setSelectedChains={setSelectedChains}
+              chainRangeParams={chainRangeParams}
+              setChainRangeParams={setChainRangeParams}
+              mode={chainMode}
+              setMode={setChainMode}
+              disabled={mode === 'upload'}
+            />
           </div>
 
           {/* Strategies */}

@@ -197,7 +197,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                   <div className="font-bold text-gray-800 text-base">
                     Size: {c.dataSize}MB / Chunk: {c.chunkSize}KB
                   </div>
-                  <div className="text-gray-500 text-xs mt-1 font-medium flex gap-2">
+                  <div className="text-gray-500 text-xs mt-1 font-medium flex gap-2 flex-wrap items-center">
                     <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">
                       {c.allocator}
                     </span>
@@ -205,7 +205,14 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                       {c.transmitter}
                     </span>
                     <span className="text-gray-400">|</span>
-                    <span>Chains: {c.chains}</span>
+
+                    {/* 変更箇所: チェーン情報の表示強化 */}
+                    <div className="flex items-center gap-1.5 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100 text-indigo-800">
+                      <span className="font-bold">{c.chains} Nodes:</span>
+                      <span className="font-mono text-[10px] text-indigo-600 truncate max-w-[150px]">
+                        [{c.targetChains.map(ch => ch.replace('datachain-', '')).join(', ')}]
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

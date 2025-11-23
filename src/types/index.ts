@@ -132,9 +132,15 @@ export interface ExperimentPreset {
     accountValue: string;
     dataSize: { mode: 'fixed' | 'range'; fixed: number; start: number; end: number; step: number };
     chunkSize: { mode: 'fixed' | 'range'; fixed: number; start: number; end: number; step: number };
+    // ここを追加
+    chainSelection?: {
+      mode: 'fixed' | 'range';
+      range: { start: number; end: number; step: number };
+      selected: string[];
+    };
     allocators: AllocatorStrategy[];
     transmitters: TransmitterStrategy[];
-    selectedChains: string[];
+    selectedChains: string[]; // 後方互換のために残す
     uploadType: 'Virtual' | 'Real';
   };
   lastModified: string;
