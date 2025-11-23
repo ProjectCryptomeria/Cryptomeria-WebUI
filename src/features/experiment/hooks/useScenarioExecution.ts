@@ -1,3 +1,5 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/hooks/useScenarioExecution.ts
+
 import { useState } from 'react';
 import {
   ExperimentScenario,
@@ -13,7 +15,7 @@ import { ExperimentFormState } from '../utils/mappers';
  * 実験シナリオの生成と実行のためのHook
  */
 export const useScenarioExecution = (
-  notify: (type: 'success' | 'error', title: string, message: string) => void,
+  notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void,
   onRegisterResult: (result: ExperimentResult) => void
 ) => {
   const [scenarios, setScenarios] = useState<ExperimentScenario[]>([]);
@@ -32,7 +34,6 @@ export const useScenarioExecution = (
 
     if (msg.type === 'ALL_COMPLETE') {
       setIsExecutionRunning(false);
-      // [修正] 全完了通知は、ここでは不要なので削除
       return;
     }
 
@@ -41,12 +42,17 @@ export const useScenarioExecution = (
         if (s.id === msg.scenarioId) {
           const nextLogs = msg.log ? [...s.logs, msg.log] : s.logs;
 
-          // [修正] RUNNING ステータスに遷移したときに通知を出す
-          // Cannot update a component (`App`) while rendering a different component エラーを回避するため
-          // setTimeout でラップしてレンダリングサイクル外で実行する
-          if (msg.status === 'RUNNING' && s.status !== 'RUNNING') {
+          // ステータス遷移時の通知ロジック
+          // 非同期で通知してレンダリングサイクルとの競合を防ぐ
+          if (msg.status && msg.status !== s.status) {
             setTimeout(() => {
-              notify('success', '実行開始', `シナリオ #${s.id} の実行を開始しました。`);
+              if (msg.status === 'RUNNING' && s.status !== 'RUNNING') {
+                notify('info', '実行開始', `シナリオ #${s.id} の実行を開始しました。`);
+              } else if (msg.status === 'COMPLETE' && s.status !== 'COMPLETE') {
+                notify('success', '実行完了', `シナリオ #${s.id} が正常に完了しました。`);
+              } else if (msg.status === 'FAIL' && s.status !== 'FAIL') {
+                notify('error', '実行失敗', `シナリオ #${s.id} が失敗しました: ${msg.log || '不明なエラー'}`);
+              }
             }, 0);
           }
 
@@ -90,16 +96,12 @@ export const useScenarioExecution = (
     const transmitters = Array.from(params.selectedTransmitters);
 
     // --- Chain Selection Logic ---
-    // 固定モードでもRangeモードでも、まずは選択されたチェーンのリストを取得してソートする
     const sortedSelectedChains = Array.from(params.selectedChains).sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true })
     );
 
-    // 使用する「チェーン数」の配列を決定
     let chainCounts: number[] = [];
     if (params.chainMode === 'range') {
-      // Rangeモード: Step設定に基づいて台数配列を作る (例: 1, 2, 3...)
-      // ただし、選択されているチェーン数を超えないようにクランプする
       const { start, end, step } = params.chainRangeParams;
       const maxCount = sortedSelectedChains.length;
 
@@ -110,9 +112,8 @@ export const useScenarioExecution = (
           }
         }
       }
-      if (chainCounts.length === 0) chainCounts = [1]; // Fallback
+      if (chainCounts.length === 0) chainCounts = [1];
     } else {
-      // Fixedモード: 選択されたチェーン全てを使用する (1パターンのみ)
       chainCounts = [sortedSelectedChains.length];
     }
 
@@ -122,9 +123,6 @@ export const useScenarioExecution = (
         for (const cCount of chainCounts) {
           for (const alloc of allocators) {
             for (const trans of transmitters) {
-
-              // 台数(cCount)に応じて、選択リストの先頭から切り出す
-              // 例: selected=[1,2,4], cCount=2 => [1,2]
               const targets = sortedSelectedChains.slice(0, cCount);
 
               if (targets.length === 0) continue;
@@ -137,7 +135,7 @@ export const useScenarioExecution = (
                 allocator: alloc,
                 transmitter: trans,
                 chains: targets.length,
-                targetChains: targets, // 具体的なチェーンIDリストを保存
+                targetChains: targets,
                 budgetLimit: 1000,
                 cost: parseFloat(
                   (ds * 0.5 + (alloc === AllocatorStrategy.AVAILABLE ? 5 : 0)).toFixed(2)
@@ -165,7 +163,7 @@ export const useScenarioExecution = (
 
   const executeScenarios = async (projectName: string) => {
     setIsExecutionRunning(true);
-    notify('success', 'ジョブをキューに追加しました', 'シナリオが実行キューに送信されました。');
+    notify('info', 'ジョブをキューに追加しました', 'シナリオが実行キューに送信されました。');
 
     const readyScenarios = scenarios.filter(s => s.status === 'READY');
     const res = await api.experiment.run(readyScenarios);

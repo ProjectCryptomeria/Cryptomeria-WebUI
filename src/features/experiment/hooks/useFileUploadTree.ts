@@ -6,7 +6,7 @@ import { useState, useRef } from 'react';
  * ファイルアップロードとツリー表示のためのHook
  * ZIPファイルとディレクトリアップロードをサポートし、ファイルツリーを構築します
  */
-export const useFileUploadTree = (notify: (type: 'success' | 'error', title: string, message: string) => void) => {
+export const useFileUploadTree = (notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void) => {
   const [uploadStats, setUploadStats] = useState<{ count: number, sizeMB: number, tree: any, treeOpen: boolean }>({ count: 0, sizeMB: 0, tree: null, treeOpen: true });
   const fileInputRef = useRef<HTMLInputElement>(null);
 

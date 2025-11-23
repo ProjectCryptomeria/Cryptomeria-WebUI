@@ -1,3 +1,5 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/types/index.ts
+
 /**
  * RaidChain WebUI Type Definitions
  *
@@ -180,7 +182,7 @@ export interface FilterCondition {
 // --- Notifications ---
 export interface Toast {
   id: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   message: string;
 }

@@ -1,14 +1,22 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/components/layout/Sidebar.tsx
+
 import React from 'react';
 import { AppLayer } from '../../types';
 import { NAV_ITEMS } from '../../utils/constants';
-import { ChevronRight, Info } from 'lucide-react';
+import { ChevronRight, Info, Loader2 } from 'lucide-react'; // Loader2 追加
 
 interface SidebarProps {
   activeLayer: AppLayer;
   setActiveLayer: (layer: AppLayer) => void;
+  // 追加: 実行中フラグを受け取る
+  isExecutionRunning?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeLayer,
+  setActiveLayer,
+  isExecutionRunning,
+}) => {
   return (
     <nav className="w-72 bg-white flex flex-col py-8 px-4 gap-2 shrink-0 overflow-y-auto border-r border-slate-100">
       <div className="px-4 mb-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
@@ -44,11 +52,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer })
                 {item.subLabel}
               </div>
             </div>
-            {isActive && <ChevronRight className="w-4 h-4 text-indigo-400" />}
+
+            {/* 変更: Experiment項目で実行中の場合にスピナーを表示 */}
+            {item.id === AppLayer.EXPERIMENT && isExecutionRunning ? (
+              <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+            ) : (
+              isActive && <ChevronRight className="w-4 h-4 text-indigo-400" />
+            )}
           </button>
         );
       })}
 
+      {/* ...以下既存コード (Cluster Infoなど) ... */}
       <div className="mt-auto pt-8 px-2">
         <div className="bg-slate-900 p-5 rounded-3xl shadow-xl relative overflow-hidden group cursor-default">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">

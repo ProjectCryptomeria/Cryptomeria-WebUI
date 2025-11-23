@@ -22,7 +22,7 @@ const MonitoringLayer: React.FC<MonitoringLayerProps> = ({ setDeployedNodeCount 
 
   // isTransitioning を追加で受け取る
   const { isOpen, setIsOpen, height, panelRef, resizerRef, isDragging, isTransitioning } =
-    useResizerPanel(320, 100, 0.8);
+    useResizerPanel(560, 100, 0.8);
 
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
     setNodes(data.nodes);

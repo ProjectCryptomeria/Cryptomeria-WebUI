@@ -19,7 +19,7 @@ export const useExperimentConfig = (
 	users: UserAccount[],
 	// deployedNodeCount は WebSocket から取得するため引数からは基本不要になりますが、初期値として残すか、内部で管理します
 	initialDeployedCount: number,
-	notify: (type: 'success' | 'error', title: string, message: string) => void,
+	notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void,
 	onSavePresetAPI: (name: string, config: ExperimentConfig, generatorState?: any) => void
 ) => {
 	// --- WebSocket Data (Nodes Status) ---

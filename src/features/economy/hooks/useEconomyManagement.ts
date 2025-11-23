@@ -8,7 +8,7 @@ import { api } from '../../../services/api';
  */
 export const useEconomyManagement = (
   deployedNodeCount: number,
-  addToast: (type: 'success' | 'error', title: string, message: string) => void
+  addToast: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void
 ) => {
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [systemAccounts, setSystemAccounts] = useState<SystemAccount[]>([]);

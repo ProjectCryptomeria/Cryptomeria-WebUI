@@ -1,3 +1,5 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/hooks/useNotification.ts
+
 import { useState, useEffect, useRef } from 'react';
 import { Toast, NotificationItem } from '../types';
 
@@ -21,7 +23,8 @@ export const useNotification = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const addToast = (type: 'success' | 'error', title: string, message: string) => {
+  // type に 'warning' を追加
+  const addToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newNotification: NotificationItem = {
       id,
