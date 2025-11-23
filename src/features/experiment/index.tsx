@@ -1,3 +1,5 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/index.tsx
+
 import React, { useState } from 'react';
 import {
   ExperimentConfig,
@@ -6,9 +8,10 @@ import {
   ExperimentScenario,
   ExperimentResult,
 } from '../../types';
-import { AlertCircle, Loader2, X, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
+import { AlertCircle, Loader2, X, ArrowLeft, CheckCircle, Clock, TestTube } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { LogViewer } from '../../components/ui/LogViewer';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
 import { useScenarioExecution } from './hooks/useScenarioExecution';
 import { useExperimentConfig } from './hooks/useExperimentConfig';
@@ -93,6 +96,14 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
       <div className="flex w-full h-full relative">
         <div className="flex-1 flex flex-col h-full min-w-0 relative z-10">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-32">
+            {/* --- Header Added Here --- */}
+            <PageHeader
+              title="Experiment Execution"
+              description="実験シナリオのパラメータ設定と実行、バッチ処理の管理"
+              icon={TestTube}
+              iconColor="text-scenario-accent"
+            />
+
             {/* --- メイン設定フォーム --- */}
             <ExperimentConfigForm
               // State passed from useExperimentConfig hook

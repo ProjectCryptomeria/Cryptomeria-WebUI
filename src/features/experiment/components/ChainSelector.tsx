@@ -197,12 +197,12 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                         </div>
                         <div>
                           <div
-                            className={`text-xs font-bold leading-none mb-1 ${isSelected ? 'text-indigo-900' : 'text-slate-600'}`}
+                            className={`text-[13px] font-bold leading-none mb-1 ${isSelected ? 'text-indigo-900' : 'text-slate-600'}`}
                           >
                             {node.id}
                           </div>
-                          <div className="text-[9px] text-slate-400 font-mono">
-                            Lat: {node.latency}ms
+                          <div className="text-[12px] text-slate-400 font-mono">
+                            Latency: {node.latency}ms
                           </div>
                         </div>
                       </div>

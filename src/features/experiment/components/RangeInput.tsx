@@ -67,7 +67,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
                 type="number"
                 value={rangeParams[field]}
                 onChange={e => onChangeRange(field, Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-xl p-2 text-sm font-mono text-center focus:border-primary-indigo outline-none focus:ring-2 focus:ring-indigo-100 transition-all bg-white text-slate-700 font-bold"
+                className="w-full border border-gray-200 rounded-xl p-2 text-lg font-mono text-center focus:border-primary-indigo outline-none focus:ring-2 focus:ring-indigo-100 transition-all bg-white text-slate-700 font-bold"
               />
             </div>
           ))}

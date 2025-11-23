@@ -23,7 +23,7 @@ export const generateMockNodes = (count: number): NodeStatus[] => {
 
   for (let i = 0; i < count; i++) {
     nodes.push({
-      id: `datachain - ${i} `,
+      id: `datachain-${i}`,
       type: 'data',
       status: Math.random() > 0.95 ? 'error' : 'active', // 5%の確率でエラー状態をシミュレート
       height: 12000 + Math.floor(Math.random() * 50),

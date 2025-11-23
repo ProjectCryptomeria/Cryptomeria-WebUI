@@ -17,7 +17,8 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 }) => {
   return (
     <label
-      className={`inline-flex items-center cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      // 修正: 'relative' クラスを追加して、sr-onlyなinputの位置をこの要素内に留める
+      className={`relative inline-flex items-center cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <input
         type="checkbox"
