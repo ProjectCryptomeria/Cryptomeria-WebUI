@@ -10,23 +10,19 @@ import { createLibrarySlice } from '@/entities/result/model/store';
 import { createExecutionSlice } from '@/features/experiment/model/store';
 
 export const useGlobalStore = create<GlobalState>()((...a) => ({
-	...createNotificationSlice(...a),
-	...createNodeSlice(...a),
-	...createEconomySlice(...a),
-	...createPresetSlice(...a),
-	...createLibrarySlice(...a),
-	...createExecutionSlice(...a),
+  ...createNotificationSlice(...a),
+  ...createNodeSlice(...a),
+  ...createEconomySlice(...a),
+  ...createPresetSlice(...a),
+  ...createLibrarySlice(...a),
+  ...createExecutionSlice(...a),
 
-	// Root Actions
-	loadData: async () => {
-		// スライスのメソッドを呼び出して初期データをロード
-		const get = a[1];
+  // Root Actions
+  loadData: async () => {
+    // スライスのメソッドを呼び出して初期データをロード
+    const get = a[1];
 
-		// 並列実行
-		await Promise.all([
-			get().refreshEconomy(),
-			get().loadPresets(),
-			get().loadResults(),
-		]);
-	},
+    // 並列実行
+    await Promise.all([get().refreshEconomy(), get().loadPresets(), get().loadResults()]);
+  },
 }));

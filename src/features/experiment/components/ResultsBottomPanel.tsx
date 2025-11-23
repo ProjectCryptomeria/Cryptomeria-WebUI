@@ -180,7 +180,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           let border = 'border-l-4 border-gray-200';
           let statusContent = null;
           let bgClass = 'bg-white';
-          let opacity = 'opacity-100';
+          const opacity = 'opacity-100';
 
           // ステータスが試算中(PENDING, CALCULATING)かどうか
           const isThisScenarioEstimating = ['PENDING', 'CALCULATING'].includes(c.status);

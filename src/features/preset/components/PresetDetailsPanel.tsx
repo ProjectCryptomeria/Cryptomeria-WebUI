@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, ReactNode, ComponentType, SVGProps } from 'react';
 import { ExperimentPreset } from '@/entities/preset';
 import {
   FileText,
@@ -14,6 +14,79 @@ import {
 } from 'lucide-react';
 import { SlideOver } from '@/shared/ui/SlideOver';
 import { Badge } from '@/shared/ui/Badge';
+
+// --- 修正箇所: DetailRow と RangeVisualizer を外部に移動し、型を定義 ---
+
+interface DetailRowProps {
+  label: string;
+  value: ReactNode;
+  // Lucideアイコンまたはその他のコンポーネントの型を定義し、anyを解消
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
+  subValue?: string;
+}
+
+/**
+ * 内部コンポーネント: 詳細行 (PresetDetailsPanel の外に移動)
+ */
+const DetailRow: React.FC<DetailRowProps> = ({ label, value, icon: Icon, subValue }) => (
+  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+    <div className="flex items-center gap-4">
+      {Icon && (
+        <div className="p-2.5 bg-white rounded-xl shadow-sm text-slate-500">
+          <Icon className="w-5 h-5" />
+        </div>
+      )}
+      <div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</div>
+        {subValue && <div className="text-[10px] text-slate-400 mt-0.5">{subValue}</div>}
+      </div>
+    </div>
+    <div className="font-mono font-bold text-slate-700 text-sm">{value}</div>
+  </div>
+);
+
+interface RangeVisualizerProps {
+  label: string;
+  start: number;
+  end: number;
+  step: number;
+  unit: string;
+}
+
+/**
+ * 内部コンポーネント: 範囲可視化 (PresetDetailsPanel の外に移動)
+ */
+const RangeVisualizer: React.FC<RangeVisualizerProps> = ({ label, start, end, step, unit }) => (
+  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 relative overflow-hidden">
+    <div className="flex justify-between items-center mb-4">
+      <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+        <Layers className="w-4 h-4" /> {label} Range
+      </span>
+      <Badge color="indigo" className="font-mono">
+        Step: {step}
+        {unit}
+      </Badge>
+    </div>
+    <div className="flex items-center justify-between font-mono font-bold text-slate-700 relative z-10 px-2">
+      <div className="flex flex-col items-center">
+        <span className="text-2xl">{start}</span>
+        <span className="text-[10px] text-slate-400">{unit}</span>
+      </div>
+      <div className="flex-1 mx-6 h-1.5 bg-slate-200 rounded-full relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-300 to-indigo-500 opacity-50 rounded-full"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 shadow-sm border border-indigo-100">
+          <ArrowRight className="w-3 h-3 text-indigo-500" />
+        </div>
+      </div>
+      <div className="flex flex-col items-center">
+        <span className="text-2xl">{end}</span>
+        <span className="text-[10px] text-slate-400">{unit}</span>
+      </div>
+    </div>
+  </div>
+);
+
+// --- Main Component Definition Starts Here ---
 
 interface PresetDetailsPanelProps {
   preset: ExperimentPreset | null;
@@ -54,77 +127,6 @@ export const PresetDetailsPanel: React.FC<PresetDetailsPanelProps> = ({ preset, 
 
   const getChainCount = (p: ExperimentPreset) =>
     p.generatorState ? p.generatorState.selectedChains.length : p.config.targetChains.length;
-
-  // 内部コンポーネント: 詳細行
-  const DetailRow = ({
-    label,
-    value,
-    icon: Icon,
-    subValue,
-  }: {
-    label: string;
-    value: React.ReactNode;
-    icon?: any;
-    subValue?: string;
-  }) => (
-    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-      <div className="flex items-center gap-4">
-        {Icon && (
-          <div className="p-2.5 bg-white rounded-xl shadow-sm text-slate-500">
-            <Icon className="w-5 h-5" />
-          </div>
-        )}
-        <div>
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</div>
-          {subValue && <div className="text-[10px] text-slate-400 mt-0.5">{subValue}</div>}
-        </div>
-      </div>
-      <div className="font-mono font-bold text-slate-700 text-sm">{value}</div>
-    </div>
-  );
-
-  // 内部コンポーネント: 範囲可視化
-  const RangeVisualizer = ({
-    label,
-    start,
-    end,
-    step,
-    unit,
-  }: {
-    label: string;
-    start: number;
-    end: number;
-    step: number;
-    unit: string;
-  }) => (
-    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 relative overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-          <Layers className="w-4 h-4" /> {label} Range
-        </span>
-        <Badge color="indigo" className="font-mono">
-          Step: {step}
-          {unit}
-        </Badge>
-      </div>
-      <div className="flex items-center justify-between font-mono font-bold text-slate-700 relative z-10 px-2">
-        <div className="flex flex-col items-center">
-          <span className="text-2xl">{start}</span>
-          <span className="text-[10px] text-slate-400">{unit}</span>
-        </div>
-        <div className="flex-1 mx-6 h-1.5 bg-slate-200 rounded-full relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-300 to-indigo-500 opacity-50 rounded-full"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 shadow-sm border border-indigo-100">
-            <ArrowRight className="w-3 h-3 text-indigo-500" />
-          </div>
-        </div>
-        <div className="flex flex-col items-center">
-          <span className="text-2xl">{end}</span>
-          <span className="text-[10px] text-slate-400">{unit}</span>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <SlideOver isOpen={!!preset} title="Preset Details" onClose={onClose} width="w-[500px]">

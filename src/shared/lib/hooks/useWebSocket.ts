@@ -32,5 +32,7 @@ export const useWebSocket = <T>(url: string, onMessage?: (data: T) => void) => {
     };
   }, [url]);
 
-  return { data, socket: socketRef.current };
+  // 修正: レンダリング時にref.currentにアクセスするエラーを解消するため、socketの返却を削除
+  // 呼び出し元（useExperimentConfig）では利用されていませんでした。
+  return { data };
 };

@@ -4,8 +4,8 @@ import { z } from 'zod';
 
 // Faucet API Request Schema
 export const FaucetRequestSchema = z.object({
-	targetId: z.string().min(1, 'Target ID is required'),
-	amount: z.number().min(1, 'Amount must be positive').optional().default(100),
+  targetId: z.string().min(1, 'Target ID is required'),
+  amount: z.number().min(1, 'Amount must be positive').optional().default(100),
 });
 
 // Scale Deployment Schema (Deploymentですが、便宜上ここに配置するか、本来はentities/deploymentを作るべきですが、

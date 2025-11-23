@@ -6,10 +6,20 @@ import { getFeeConstants } from './mockData';
 import { z } from 'zod';
 
 // Schemas
-import { EstimateRequestSchema, RunExperimentRequestSchema } from '@/entities/scenario';
+// 修正: ExperimentScenarioをインポートに追加
+import { EstimateRequestSchema, RunExperimentRequestSchema, ExperimentScenario } from '@/entities/scenario';
 import { FaucetRequestSchema } from '@/entities/account/model/schemas';
 import { ScaleRequestSchema } from '@/entities/deployment';
 import { ExperimentPreset } from '@/entities/preset';
+
+// --- MSW Handler Context Minimal Types (anyを解消) ---
+type RequestOnlyContext = {
+  request: Request;
+};
+type ParamsOnlyContext = {
+  params: { [key: string]: string | undefined };
+};
+// ---------------------------------------------------
 
 /**
  * MSW Handlers
@@ -24,7 +34,7 @@ export const handlers = [
     return HttpResponse.json(result, { status: 202 });
   }),
 
-  http.post('/api/deployment/scale', async ({ request }: any) => {
+  http.post('/api/deployment/scale', async ({ request }: RequestOnlyContext) => {
     await delay(500);
 
     try {
@@ -62,7 +72,7 @@ export const handlers = [
     return HttpResponse.json(newUser, { status: 201 });
   }),
 
-  http.delete('/api/economy/user/:id', async ({ params }: any) => {
+  http.delete('/api/economy/user/:id', async ({ params }: ParamsOnlyContext) => {
     await delay(300);
     const { id } = params;
 
@@ -74,7 +84,7 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  http.post('/api/economy/faucet', async ({ request }: any) => {
+  http.post('/api/economy/faucet', async ({ request }: RequestOnlyContext) => {
     await delay(300);
 
     try {
@@ -84,17 +94,21 @@ export const handlers = [
 
       const result = await MockServer.faucet(targetId, amount);
       return HttpResponse.json(result);
-    } catch (e: any) {
+    } catch (e) {
       if (e instanceof z.ZodError) {
         // 修正: e.errors -> e.issues
         return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });
       }
-      return HttpResponse.json({ error: (e as Error).message }, { status: 400 });
+      // eがErrorオブジェクトであることをチェック
+      if (e instanceof Error) {
+        return HttpResponse.json({ error: e.message }, { status: 400 });
+      }
+      return HttpResponse.json({ error: 'Unknown Error' }, { status: 500 });
     }
   }),
 
   // --- Experiment Layer ---
-  http.post('/api/experiment/estimate', async ({ request }: any) => {
+  http.post('/api/experiment/estimate', async ({ request }: RequestOnlyContext) => {
     await delay(200);
 
     try {
@@ -132,7 +146,7 @@ export const handlers = [
     }
   }),
 
-  http.post('/api/experiment/run', async ({ request }: any) => {
+  http.post('/api/experiment/run', async ({ request }: RequestOnlyContext) => {
     await delay(200);
 
     try {
@@ -140,7 +154,9 @@ export const handlers = [
       // Zodバリデーション
       const { scenarios } = RunExperimentRequestSchema.parse(body);
 
-      const result = await MockServer.runExperiment(scenarios as any);
+      // 修正: Zodの出力型とMockServerの必要とするExperimentScenario型との不一致を、
+      // unknownを介して型アサーションを行うことで解消します。(TS2352/TS2345の解消)
+      const result = await MockServer.runExperiment(scenarios as unknown as ExperimentScenario[]);
       return HttpResponse.json(result, { status: 202 });
     } catch (e) {
       if (e instanceof z.ZodError) {
@@ -157,7 +173,7 @@ export const handlers = [
     return HttpResponse.json(results);
   }),
 
-  http.delete('/api/library/results/:id', async ({ params }: any) => {
+  http.delete('/api/library/results/:id', async ({ params }: ParamsOnlyContext) => {
     await delay(200);
     const { id } = params;
 
@@ -176,15 +192,15 @@ export const handlers = [
     return HttpResponse.json(presets);
   }),
 
-  http.post('/api/presets', async ({ request }: any) => {
+  http.post('/api/presets', async ({ request }: RequestOnlyContext) => {
     await delay(300);
     // Presetのバリデーションは構造が複雑なため今回はスキップ
-    const preset = await request.json() as ExperimentPreset;
+    const preset = (await request.json()) as ExperimentPreset;
     const saved = await MockServer.savePreset(preset);
     return HttpResponse.json(saved);
   }),
 
-  http.delete('/api/presets/:id', async ({ params }: any) => {
+  http.delete('/api/presets/:id', async ({ params }: ParamsOnlyContext) => {
     await delay(300);
     const { id } = params;
     if (!id) return HttpResponse.json({ error: 'ID required' }, { status: 400 });

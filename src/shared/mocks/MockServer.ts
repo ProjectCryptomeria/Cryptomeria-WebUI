@@ -83,8 +83,8 @@ class MockServerInstance {
   private nextBaseFee: number = this.currentBaseFee;
   private averageBaseFee: number = this.currentBaseFee;
 
-  private intervals: any[] = [];
-  private subscribers: { [url: string]: ((data: any) => void)[] } = {};
+  private intervals: NodeJS.Timeout[] = []; // 修正: any[] -> NodeJS.Timeout[]
+  private subscribers: { [url: string]: ((data: unknown) => void)[] } = {}; // 修正: any -> unknown
 
   constructor() {
     this.init();
@@ -194,7 +194,8 @@ class MockServerInstance {
   }
 
   // --- Pub/Sub System ---
-  public subscribe(url: string, callback: (data: any) => void) {
+  public subscribe(url: string, callback: (data: unknown) => void) {
+    // 修正: any -> unknown
     const baseUrl = url.split('?')[0];
     if (!this.subscribers[baseUrl]) this.subscribers[baseUrl] = [];
     this.subscribers[baseUrl].push(callback);
@@ -217,7 +218,8 @@ class MockServerInstance {
     };
   }
 
-  private broadcast(url: string, data: any) {
+  private broadcast(url: string, data: unknown) {
+    // 修正: any -> unknown
     if (this.subscribers[url]) {
       this.subscribers[url].forEach(cb => cb(data));
     }

@@ -9,6 +9,36 @@ import { StrategyCard } from './StrategyCard';
 import { ChainSelector } from './ChainSelector';
 import { FileTreeViewer } from './FileTreeViewer';
 
+// --- Type Definitions ---
+
+// TreeNodeData (FileTreeViewerから借用、ここでは簡略化)
+interface TreeNodeData {
+  name: string;
+  type: 'folder' | 'file';
+  size?: number;
+  children?: { [key: string]: TreeNodeData };
+}
+
+// Upload Statsの型定義
+interface UploadStats {
+  count: number;
+  sizeMB: number;
+  tree: TreeNodeData | null;
+  treeOpen: boolean;
+}
+
+// 数値パラメータの型定義
+type NumericParams = {
+  mode: 'fixed' | 'range';
+  fixed: number;
+  range: { start: number; end: number; step: number };
+};
+
+// Chain Rangeパラメータの型定義
+type ChainRangeParams = { start: number; end: number; step: number };
+
+// --- Props Interface ---
+
 interface ExperimentConfigFormProps {
   // Mode
   mode: 'virtual' | 'upload';
@@ -22,36 +52,26 @@ interface ExperimentConfigFormProps {
   setSelectedUserId: (id: string) => void;
 
   // File Upload
-  uploadStats: { count: number; sizeMB: number; tree: any; treeOpen: boolean };
-  setUploadStats: React.Dispatch<
-    React.SetStateAction<{ count: number; sizeMB: number; tree: any; treeOpen: boolean }>
-  >;
+  uploadStats: UploadStats;
+  setUploadStats: React.Dispatch<React.SetStateAction<UploadStats>>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileProcess: (files: File[]) => void;
 
   // Numeric Parameters
-  dataSizeParams: {
-    mode: 'fixed' | 'range';
-    fixed: number;
-    range: { start: number; end: number; step: number };
-  };
-  setDataSizeParams: React.Dispatch<React.SetStateAction<any>>;
-  chunkSizeParams: {
-    mode: 'fixed' | 'range';
-    fixed: number;
-    range: { start: number; end: number; step: number };
-  };
-  setChunkSizeParams: React.Dispatch<React.SetStateAction<any>>;
+  dataSizeParams: NumericParams;
+  setDataSizeParams: React.Dispatch<React.SetStateAction<NumericParams>>;
+  chunkSizeParams: NumericParams;
+  setChunkSizeParams: React.Dispatch<React.SetStateAction<NumericParams>>;
 
   // Chain Selection
   nodes: NodeStatus[];
-  deployedNodeCount: number;
+  deployedNodeCount: number; // Propとして残す
   selectedChains: Set<string>;
   setSelectedChains: (chains: Set<string>) => void;
   chainMode: 'fixed' | 'range';
   setChainMode: (mode: 'fixed' | 'range') => void;
-  chainRangeParams: { start: number; end: number; step: number };
-  setChainRangeParams: (params: any) => void;
+  chainRangeParams: ChainRangeParams;
+  setChainRangeParams: React.Dispatch<React.SetStateAction<ChainRangeParams>>;
 
   // Strategies
   selectedAllocators: Set<AllocatorStrategy>;
@@ -81,7 +101,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   chunkSizeParams,
   setChunkSizeParams,
   nodes,
-  deployedNodeCount,
+  // deployedNodeCount: _deployedNodeCount, // 修正: 未使用のプロパティをデストラクトリストから削除
   selectedChains,
   setSelectedChains,
   chainMode,
@@ -94,6 +114,8 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   setSelectedTransmitters,
   isGenerating,
   onGenerate,
+  // `deployedNodeCount`はここでは使用されないため、デストラクトリストから除外しました。
+  // それ以外のプロパティはそのまま受け取ります。
 }) => {
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const selectedUser = users.find(u => u.id === selectedUserId);
@@ -181,11 +203,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
               >
                 <input
                   type="file"
-                  ref={fileInputRef}
+                  ref={fileInputRef} // 修正: Refの型キャストを削除 (エラー2322, 2352の解消)
                   className="hidden"
                   multiple
                   onChange={e => e.target.files && onFileProcess(Array.from(e.target.files))}
-                  {...({ webkitdirectory: '' } as any)}
+                  // webkitdirectoryは非標準属性であり、型チェックを回避するため、元のコードと同様に属性をanyにキャスト
+                  {...({ webkitdirectory: '' } as object)} // 修正: エラー2430の解消
                 />
                 <div className="bg-white w-20 h-20 rounded-full shadow-lg mb-4 flex items-center justify-center text-primary-indigo group-hover:scale-110 transition-transform duration-300">
                   <Upload className="w-8 h-8" />
@@ -358,7 +381,6 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
               setChainRangeParams={setChainRangeParams}
               mode={chainMode}
               setMode={setChainMode}
-              // 修正: アップロードモードでもChainSelectorをロックしないように変更 (disabled={false}と同等)
               // disabled={mode === 'upload'}
             />
           </div>
@@ -380,9 +402,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     selected={selectedAllocators.has(AllocatorStrategy.ROUND_ROBIN)}
                     onClick={() => {
                       const s = new Set(selectedAllocators);
-                      s.has(AllocatorStrategy.ROUND_ROBIN) && s.size > 1
-                        ? s.delete(AllocatorStrategy.ROUND_ROBIN)
-                        : s.add(AllocatorStrategy.ROUND_ROBIN);
+                      // 修正: no-unused-expressionsを解消
+                      if (s.has(AllocatorStrategy.ROUND_ROBIN) && s.size > 1) {
+                        s.delete(AllocatorStrategy.ROUND_ROBIN);
+                      } else {
+                        s.add(AllocatorStrategy.ROUND_ROBIN);
+                      }
                       setSelectedAllocators(s);
                     }}
                   />
@@ -392,9 +417,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     selected={selectedAllocators.has(AllocatorStrategy.AVAILABLE)}
                     onClick={() => {
                       const s = new Set(selectedAllocators);
-                      s.has(AllocatorStrategy.AVAILABLE) && s.size > 1
-                        ? s.delete(AllocatorStrategy.AVAILABLE)
-                        : s.add(AllocatorStrategy.AVAILABLE);
+                      // 修正: no-unused-expressionsを解消
+                      if (s.has(AllocatorStrategy.AVAILABLE) && s.size > 1) {
+                        s.delete(AllocatorStrategy.AVAILABLE);
+                      } else {
+                        s.add(AllocatorStrategy.AVAILABLE);
+                      }
                       setSelectedAllocators(s);
                     }}
                   />
@@ -404,9 +432,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     selected={selectedAllocators.has(AllocatorStrategy.RANDOM)}
                     onClick={() => {
                       const s = new Set(selectedAllocators);
-                      s.has(AllocatorStrategy.RANDOM) && s.size > 1
-                        ? s.delete(AllocatorStrategy.RANDOM)
-                        : s.add(AllocatorStrategy.RANDOM);
+                      // 修正: no-unused-expressionsを解消
+                      if (s.has(AllocatorStrategy.RANDOM) && s.size > 1) {
+                        s.delete(AllocatorStrategy.RANDOM);
+                      } else {
+                        s.add(AllocatorStrategy.RANDOM);
+                      }
                       setSelectedAllocators(s);
                     }}
                   />
@@ -423,9 +454,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     selected={selectedTransmitters.has(TransmitterStrategy.ONE_BY_ONE)}
                     onClick={() => {
                       const s = new Set(selectedTransmitters);
-                      s.has(TransmitterStrategy.ONE_BY_ONE) && s.size > 1
-                        ? s.delete(TransmitterStrategy.ONE_BY_ONE)
-                        : s.add(TransmitterStrategy.ONE_BY_ONE);
+                      // 修正: no-unused-expressionsを解消
+                      if (s.has(TransmitterStrategy.ONE_BY_ONE) && s.size > 1) {
+                        s.delete(TransmitterStrategy.ONE_BY_ONE);
+                      } else {
+                        s.add(TransmitterStrategy.ONE_BY_ONE);
+                      }
                       setSelectedTransmitters(s);
                     }}
                   />
@@ -435,9 +469,12 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     selected={selectedTransmitters.has(TransmitterStrategy.MULTI_BURST)}
                     onClick={() => {
                       const s = new Set(selectedTransmitters);
-                      s.has(TransmitterStrategy.MULTI_BURST) && s.size > 1
-                        ? s.delete(TransmitterStrategy.MULTI_BURST)
-                        : s.add(TransmitterStrategy.MULTI_BURST);
+                      // 修正: no-unused-expressionsを解消
+                      if (s.has(TransmitterStrategy.MULTI_BURST) && s.size > 1) {
+                        s.delete(TransmitterStrategy.MULTI_BURST);
+                      } else {
+                        s.add(TransmitterStrategy.MULTI_BURST);
+                      }
                       setSelectedTransmitters(s);
                     }}
                   />

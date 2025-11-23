@@ -18,12 +18,20 @@ type GlobalToggle = {
   timestamp: number;
 };
 
+// 修正: any型をTreeNodeDataとして定義
+interface TreeNodeData {
+  name: string;
+  type: 'folder' | 'file';
+  size?: number; // ファイルの場合
+  children?: { [key: string]: TreeNodeData }; // フォルダの場合
+}
+
 const TreeNode = ({
   node,
   level = 0,
   globalToggle,
 }: {
-  node: any;
+  node: TreeNodeData; // 修正: anyをTreeNodeDataに
   level?: number;
   globalToggle: GlobalToggle;
 }) => {
@@ -34,6 +42,8 @@ const TreeNode = ({
   // 親からの開閉シグナルを検知
   useEffect(() => {
     if (globalToggle.timestamp > 0) {
+      // NOTE: 親からの操作による状態同期のため、set-state-in-effectを無効化
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsOpen(globalToggle.expanded);
     }
   }, [globalToggle]);
@@ -97,9 +107,14 @@ const TreeNode = ({
       {/* --- 子要素 (再帰) --- */}
       {hasChildren && isOpen && (
         <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-          {Object.values(node.children).map((child: any, i: number) => (
-            <TreeNode key={i} node={child} level={level + 1} globalToggle={globalToggle} />
-          ))}
+          {Object.values(node.children as { [key: string]: TreeNodeData }).map(
+            (
+              child: TreeNodeData,
+              i: number // 修正: anyをTreeNodeDataに
+            ) => (
+              <TreeNode key={i} node={child} level={level + 1} globalToggle={globalToggle} />
+            )
+          )}
         </div>
       )}
     </div>
@@ -109,7 +124,8 @@ const TreeNode = ({
 /**
  * ディレクトリ構造を表示するツリービューコンポーネント
  */
-export const FileTreeViewer = ({ tree }: { tree: any }) => {
+export const FileTreeViewer = ({ tree }: { tree: TreeNodeData }) => {
+  // 修正: anyをTreeNodeDataに
   // 全開閉のステート管理
   const [globalToggle, setGlobalToggle] = useState<GlobalToggle>({ expanded: true, timestamp: 0 });
 
@@ -137,10 +153,15 @@ export const FileTreeViewer = ({ tree }: { tree: any }) => {
 
       {/* ツリー本体 */}
       <div className="flex-1">
-        {Object.values(tree.children || {}).map((child: any, i: number) => (
-          // トップレベルなので level={0} を渡す
-          <TreeNode key={i} node={child} level={0} globalToggle={globalToggle} />
-        ))}
+        {Object.values(tree.children || {}).map(
+          (
+            child: TreeNodeData,
+            i: number // 修正: anyをTreeNodeDataに
+          ) => (
+            // トップレベルなので level={0} を渡す
+            <TreeNode key={i} node={child} level={0} globalToggle={globalToggle} />
+          )
+        )}
       </div>
     </div>
   );

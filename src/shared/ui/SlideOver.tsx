@@ -19,6 +19,8 @@ export const SlideOver: React.FC<{
 
   useEffect(() => {
     if (isOpen) {
+      // 開く際に即座に表示状態にするのはアニメーションの制御に必須
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(true);
     } else {
       // 閉じるアニメーション(300ms)を待ってから非表示にする
