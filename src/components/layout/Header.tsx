@@ -14,8 +14,9 @@ import {
   RotateCcw,
   Play,
   Coins,
+  Trash2,
 } from 'lucide-react';
-import { NotificationItem, ExperimentScenario } from '../../types';
+import { NotificationItem, ExperimentScenario, UserAccount } from '../../types';
 import { useScenarioExecution } from '../../features/experiment/hooks/useScenarioExecution';
 
 interface HeaderProps {
@@ -27,6 +28,7 @@ interface HeaderProps {
   notificationRef: React.RefObject<HTMLDivElement>;
   execution: ReturnType<typeof useScenarioExecution>;
   onLogClick: (scenario: ExperimentScenario) => void;
+  users: UserAccount[];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   notificationRef,
   execution,
   onLogClick,
+  users,
 }) => {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const queueRef = useRef<HTMLDivElement>(null);
@@ -57,11 +60,18 @@ export const Header: React.FC<HeaderProps> = ({
     ['PENDING', 'CALCULATING', 'READY', 'RUNNING'].includes(c.status)
   ).length;
   const runningCount = scenarios.filter(c => c.status === 'RUNNING').length;
+  const hasScenarios = scenarios.length > 0;
 
-  // 一括実行可否: 実行中でない かつ READYがある
-  const canExecuteAll = !execution.isExecutionRunning && scenarios.some(s => s.status === 'READY');
+  // 試算中(PENDING含む)かどうか
+  const isEstimating = scenarios.some(s => ['PENDING', 'CALCULATING'].includes(s.status));
+
+  // 一括実行可否: 実行中でない かつ 試算中でない かつ READYがある
+  const canExecuteAll =
+    !execution.isExecutionRunning && !isEstimating && scenarios.some(s => s.status === 'READY');
   // 一括再試算可否: 実行中でない かつ FAILがある
   const canRecalculate = !execution.isExecutionRunning && scenarios.some(s => s.status === 'FAIL');
+  // 削除可否: 実行中でない かつ 試算中でない かつ シナリオがある
+  const canRemoveAll = !execution.isExecutionRunning && !isEstimating && hasScenarios;
 
   return (
     <header className="h-20 bg-white px-8 flex items-center justify-between z-40 shrink-0 border-b border-slate-100">
@@ -123,9 +133,20 @@ export const Header: React.FC<HeaderProps> = ({
                 </h3>
 
                 <div className="flex items-center gap-2">
+                  {/* 全削除ボタン */}
+                  {canRemoveAll && (
+                    <button
+                      onClick={() => execution.clearAllScenarios()}
+                      className="p-1.5 bg-white border border-slate-200 text-slate-400 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
+                      title="全て削除"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+
                   {canRecalculate && (
                     <button
-                      onClick={() => execution.handleRecalculateAll([])} // Note: ここでusersを渡す必要があるため、実際はContext等で管理推奨だが、簡易的に空配列でエラー回避
+                      onClick={() => execution.handleRecalculateAll(users)}
                       className="p-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                       title="一括再試算"
                     >
@@ -160,6 +181,9 @@ export const Header: React.FC<HeaderProps> = ({
                     let bgClass = 'bg-white border-slate-100';
                     let textClass = 'text-slate-600';
 
+                    // このシナリオが試算中かどうか
+                    const isThisEstimating = ['PENDING', 'CALCULATING'].includes(s.status);
+
                     if (s.status === 'PENDING') {
                       icon = <Clock className="w-4 h-4 text-slate-300" />;
                       bgClass = 'bg-slate-50 border-slate-100 opacity-70';
@@ -191,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onLogClick(s);
                           setIsQueueOpen(false);
                         }}
-                        className={`px-3 py-2.5 rounded-xl border ${bgClass} flex items-center justify-between gap-3 transition-colors cursor-pointer hover:shadow-sm`}
+                        className={`px-3 py-2.5 rounded-xl border ${bgClass} flex items-center justify-between gap-3 transition-colors cursor-pointer hover:shadow-sm group`}
                       >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                           <div className="shrink-0 mt-0.5">{icon}</div>
@@ -208,6 +232,20 @@ export const Header: React.FC<HeaderProps> = ({
                             </div>
                           </div>
                         </div>
+
+                        {/* 個別削除 (ホバー時のみ表示 + 実行中/試算中は非表示) */}
+                        {!execution.isExecutionRunning && !isThisEstimating && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              execution.removeScenario(s.id);
+                            }}
+                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="削除"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     );
                   })
@@ -216,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <div className="p-3 border-t border-slate-50 bg-slate-50/50 flex justify-end">
                 <span className="text-[10px] text-slate-400 font-medium">
-                  {runningCount > 0 ? `${runningCount} 件実行中...` : '待機中'}
+                  {/* {runningCount > 0 ? `${runningCount} 件実行中...` : '待機中'} */}
                 </span>
               </div>
             </div>

@@ -1,13 +1,20 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/components/layout/MainLayout.tsx
 
 import React from 'react';
-import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { AppLayer, NotificationItem, Toast, ExperimentScenario } from '../../types';
-import { CheckCircle, AlertTriangle, X, Loader2, Info } from 'lucide-react';
+import { Header } from './Header';
+import { Toast } from '../../types';
+import {
+  AppLayer,
+  NotificationItem,
+  ExperimentScenario,
+  UserAccount, // 追加
+} from '../../types';
+import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useScenarioExecution } from '../../features/experiment/hooks/useScenarioExecution';
 
 interface MainLayoutProps {
+  children: React.ReactNode;
   activeLayer: AppLayer;
   setActiveLayer: (layer: AppLayer) => void;
   deployedNodeCount: number;
@@ -16,14 +23,15 @@ interface MainLayoutProps {
   setIsNotificationOpen: (open: boolean) => void;
   clearNotifications: () => void;
   notificationRef: React.RefObject<HTMLDivElement>;
-  children: React.ReactNode;
   toasts: Toast[];
-  isExecutionRunning?: boolean;
+  isExecutionRunning: boolean;
   execution: ReturnType<typeof useScenarioExecution>;
   onLogClick: (scenario: ExperimentScenario) => void;
+  users: UserAccount[]; // 追加: Appから受け取る
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
+  children,
   activeLayer,
   setActiveLayer,
   deployedNodeCount,
@@ -32,84 +40,83 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   setIsNotificationOpen,
   clearNotifications,
   notificationRef,
-  children,
   toasts,
   isExecutionRunning,
   execution,
   onLogClick,
+  users, // 受け取る
 }) => {
-  // トーストのスタイル決定ロジック
-  const getToastStyles = (type: 'success' | 'error' | 'warning' | 'info') => {
-    switch (type) {
-      case 'success':
-        return {
-          container: 'bg-emerald-100 text-emerald-600',
-          icon: <CheckCircle className="w-5 h-5" />,
-        };
-      case 'error':
-        return {
-          container: 'bg-red-100 text-red-600',
-          icon: <AlertTriangle className="w-5 h-5" />,
-        };
-      case 'warning':
-        return {
-          container: 'bg-yellow-100 text-yellow-600',
-          icon: <AlertTriangle className="w-5 h-5" />,
-        };
-      case 'info':
-        return {
-          container: 'bg-blue-100 text-blue-600',
-          icon: <Info className="w-5 h-5" />,
-        };
-    }
-  };
-
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      <Header
-        deployedNodeCount={deployedNodeCount}
-        notifications={notifications}
-        isNotificationOpen={isNotificationOpen}
-        setIsNotificationOpen={setIsNotificationOpen}
-        clearNotifications={clearNotifications}
-        notificationRef={notificationRef}
-        execution={execution}
-        onLogClick={onLogClick}
+    <div className="flex h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
+      {/* Sidebar */}
+      <Sidebar
+        activeLayer={activeLayer}
+        setActiveLayer={setActiveLayer}
+        isExecutionRunning={isExecutionRunning}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          activeLayer={activeLayer}
-          setActiveLayer={setActiveLayer}
-          isExecutionRunning={isExecutionRunning}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white relative shadow-2xl z-0">
+        <Header
+          deployedNodeCount={deployedNodeCount}
+          notifications={notifications}
+          isNotificationOpen={isNotificationOpen}
+          setIsNotificationOpen={setIsNotificationOpen}
+          clearNotifications={clearNotifications}
+          notificationRef={notificationRef}
+          execution={execution}
+          onLogClick={onLogClick}
+          users={users} // Headerに渡す
         />
-        <main className="flex-1 bg-slate-50/50 relative overflow-hidden">
-          {children}
-          <div className="fixed bottom-8 left-8 z-[100] flex flex-col gap-4 pointer-events-none w-80">
-            {toasts.map(toast => {
-              const styles = getToastStyles(toast.type);
-              return (
-                <div
-                  key={toast.id}
-                  className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 w-full animate-in slide-in-from-left-10 fade-in duration-500 pointer-events-auto flex items-start gap-4 ring-1 ring-black/5"
-                >
-                  <div className={`mt-0.5 p-2 rounded-full ${styles.container}`}>{styles.icon}</div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-bold text-slate-800">{toast.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
-                      {toast.message}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {}}
-                    className="text-slate-300 hover:text-slate-500 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </main>
+
+        <main className="flex-1 overflow-hidden relative z-0">{children}</main>
+
+        {/* Toast Container */}
+        <div className="absolute bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className={`
+                pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border animate-in slide-in-from-right-5 fade-in duration-300
+                ${
+                  toast.type === 'success'
+                    ? 'bg-white border-emerald-100 text-emerald-800'
+                    : toast.type === 'error'
+                      ? 'bg-white border-red-100 text-red-800'
+                      : toast.type === 'warning'
+                        ? 'bg-white border-yellow-100 text-yellow-800'
+                        : 'bg-white border-blue-100 text-blue-800'
+                }
+              `}
+            >
+              <div
+                className={`p-1 rounded-full ${
+                  toast.type === 'success'
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : toast.type === 'error'
+                      ? 'bg-red-100 text-red-600'
+                      : toast.type === 'warning'
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : 'bg-blue-100 text-blue-600'
+                }`}
+              >
+                {toast.type === 'success' ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : toast.type === 'error' ? (
+                  <AlertCircle className="w-4 h-4" />
+                ) : toast.type === 'warning' ? (
+                  <AlertTriangle className="w-4 h-4" />
+                ) : (
+                  <Info className="w-4 h-4" />
+                )}
+              </div>
+              <div className="min-w-[200px]">
+                <p className="font-bold text-sm">{toast.title}</p>
+                <p className="text-xs opacity-90 mt-0.5">{toast.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

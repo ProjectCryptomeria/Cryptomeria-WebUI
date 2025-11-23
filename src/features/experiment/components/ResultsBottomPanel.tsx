@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExperimentScenario, UserAccount } from '../../../types';
+import { ExperimentScenario } from '../../../types';
 import {
   List,
   CheckCircle,
@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   Coins,
+  Trash2,
 } from 'lucide-react';
 import { BottomPanel } from '../../../components/ui/BottomPanel';
 
@@ -28,15 +29,12 @@ interface ResultsBottomPanelProps {
   isExecutionRunning: boolean;
   pendingCount: number;
 
-  // 一括再試算には最新のユーザー情報(残高)が必要なため引数を変更しても良いが、
-  // ここでは親から関数を受け取る形にする
   onRecalculateAll: () => void;
   onExecute: () => void;
   onErrorClick: (id: string, reason: string) => void;
   onLogClick: (scenario: ExperimentScenario) => void;
-
-  // 廃止: onReprocess (個別再実行)
-  onReprocess?: (id: number) => void;
+  onRemoveScenario: (id: number) => void;
+  onClearAllScenarios: () => void;
 }
 
 export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
@@ -55,13 +53,15 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
   onExecute,
   onErrorClick,
   onLogClick,
+  onRemoveScenario,
+  onClearAllScenarios,
 }) => {
-  // 試算中かどうか判定
-  const isCalculating = scenarios.some(s => s.status === 'CALCULATING');
-  // 実行可能なシナリオがあるか
+  // 試算中（PENDINGまたはCALCULATING）が含まれるか判定
+  const isEstimating = scenarios.some(s => ['PENDING', 'CALCULATING'].includes(s.status));
+
   const hasReadyScenarios = scenarios.some(s => s.status === 'READY');
-  // 失敗があるか
   const hasFailed = failCount > 0;
+  const hasScenarios = scenarios.length > 0;
 
   return (
     <BottomPanel
@@ -117,7 +117,19 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
         </div>
 
         <div className="flex gap-3">
-          {/* 一括再試算ボタン: 失敗がある、かつ実行中でない場合に表示 */}
+          {/* 全削除ボタン: シナリオがあり、実行中でなく、試算中でもない場合に表示 */}
+          {hasScenarios && !isExecutionRunning && !isEstimating && (
+            <button
+              onClick={onClearAllScenarios}
+              className="bg-white text-slate-500 border border-slate-300 px-4 py-2.5 rounded-xl font-bold shadow-sm flex items-center hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+              title="キューを空にする"
+            >
+              <Trash2 className="w-5 h-5 mr-2" />
+              全削除
+            </button>
+          )}
+
+          {/* 一括再試算ボタン: 失敗があり、実行中でない場合に表示 */}
           {hasFailed && !isExecutionRunning && (
             <button
               onClick={onRecalculateAll}
@@ -131,12 +143,12 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           {/* 実行ボタン */}
           <button
             onClick={onExecute}
-            // 試算中 または 実行中 または 実行可能シナリオがない場合は押せない
-            disabled={isCalculating || isExecutionRunning || !hasReadyScenarios}
+            // 試算中(PENDING含む) または 実行中 または 実行可能シナリオがない場合は押せない
+            disabled={isEstimating || isExecutionRunning || !hasReadyScenarios}
             className={`
               px-6 py-2.5 rounded-xl font-bold shadow-sm flex items-center transition-all transform active:scale-95
               ${
-                isCalculating || isExecutionRunning || !hasReadyScenarios
+                isEstimating || isExecutionRunning || !hasReadyScenarios
                   ? 'bg-gray-300 text-white opacity-70 cursor-not-allowed'
                   : 'bg-primary-indigo text-white hover:bg-indigo-700 hover:shadow-md'
               }
@@ -147,7 +159,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
                 実行中...
               </>
-            ) : isCalculating ? (
+            ) : isEstimating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
                 試算中...
@@ -170,8 +182,10 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           let bgClass = 'bg-white';
           let opacity = 'opacity-100';
 
+          // ステータスが試算中(PENDING, CALCULATING)かどうか
+          const isThisScenarioEstimating = ['PENDING', 'CALCULATING'].includes(c.status);
+
           if (c.status === 'PENDING') {
-            // 試算待機: グレー
             border = 'border-l-4 border-slate-300';
             bgClass = 'bg-slate-50';
             statusContent = (
@@ -180,15 +194,13 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               </div>
             );
           } else if (c.status === 'CALCULATING') {
-            // 試算中: 黄色
-            border = 'border-l-4 border-status-process'; // Yellow
+            border = 'border-l-4 border-status-process';
             statusContent = (
               <div className="text-status-process font-bold flex items-center">
                 <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> 試算中...
               </div>
             );
           } else if (c.status === 'READY') {
-            // 実行待機 (試算完了): 青
             border = 'border-l-4 border-status-ready';
             statusContent = (
               <div className="text-status-ready font-bold flex items-center bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
@@ -196,7 +208,6 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               </div>
             );
           } else if (c.status === 'RUNNING') {
-            // 実行中
             border = 'border-l-4 border-status-process';
             bgClass = 'bg-yellow-50/30';
             statusContent = (
@@ -205,7 +216,6 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               </div>
             );
           } else if (c.status === 'COMPLETE') {
-            // 完了
             border = 'border-l-4 border-status-success';
             statusContent = (
               <div className="text-status-success font-bold flex items-center">
@@ -213,7 +223,6 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               </div>
             );
           } else if (c.status === 'FAIL') {
-            // 失敗
             border = 'border-l-4 border-status-fail';
             bgClass = 'bg-red-50/50';
             statusContent = (
@@ -235,7 +244,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
             <div
               key={c.uniqueId}
               onClick={() => onLogClick(c)}
-              className={`p-4 rounded-2xl shadow-sm ${border} ${bgClass} ${opacity} flex justify-between items-center hover:shadow-md transition-all cursor-pointer mb-1`}
+              className={`p-4 rounded-2xl shadow-sm ${border} ${bgClass} ${opacity} flex justify-between items-center hover:shadow-md transition-all cursor-pointer mb-1 group`}
             >
               <div className="flex items-center space-x-5 flex-1">
                 <div className="text-center w-10 shrink-0">
@@ -249,7 +258,6 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                     <div className="font-mono text-xs font-bold text-gray-400 truncate opacity-70">
                       {c.uniqueId}
                     </div>
-                    {/* ユーザーIDバッジ */}
                     <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-[100px]">
                       user: {c.userId}
                     </span>
@@ -272,7 +280,24 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="text-right shrink-0 flex items-center pl-4">{statusContent}</div>
+
+              <div className="text-right shrink-0 flex items-center pl-4 gap-3">
+                {statusContent}
+
+                {/* 個別削除ボタン: 実行中でなく、かつこのシナリオが試算中でない場合のみ表示 */}
+                {!isExecutionRunning && !isThisScenarioEstimating && (
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      onRemoveScenario(c.id);
+                    }}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                    title="削除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

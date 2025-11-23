@@ -39,7 +39,6 @@ const App: React.FC = () => {
     clearNotifications,
   } = useNotification();
 
-  // refresh を分割代入で取得
   const {
     users,
     systemAccounts,
@@ -112,8 +111,6 @@ const App: React.FC = () => {
   };
   const handleRegisterResult = (result: ExperimentResult) => setResults(prev => [result, ...prev]);
 
-  // アプリ全体で実行状態を保持
-  // 第3引数に refreshEconomy を渡して、実験完了時の残高更新を行う
   const execution = useScenarioExecution(addToast, handleRegisterResult, refreshEconomy);
 
   const handleLogClick = (scenario: ExperimentScenario) => {
@@ -140,6 +137,7 @@ const App: React.FC = () => {
         isExecutionRunning={execution.isExecutionRunning}
         execution={execution}
         onLogClick={handleLogClick}
+        users={users} // 追加: Headerで使用するため渡す
       >
         {(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
           <div className="absolute inset-0 overflow-hidden">
