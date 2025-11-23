@@ -1,39 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  AllocatorStrategy,
-  TransmitterStrategy,
-  ExperimentConfig,
   UserAccount,
   ExperimentPreset,
+  ExperimentConfig,
   ExperimentScenario,
   ExperimentResult,
 } from '../../types';
-import {
-  Settings2,
-  Box,
-  Upload,
-  Zap,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  X,
-  ChevronDown,
-  Info,
-  ChevronUp,
-  Lock,
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-} from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { ArrowLeft } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
-import { LogViewer } from '../../components/ui/LogViewer';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
-import { useFileUploadTree } from './hooks/useFileUploadTree';
 import { useScenarioExecution } from './hooks/useScenarioExecution';
-import { FileTreeViewer } from './components/FileTreeViewer';
-import { PresetSidePanel } from './components/PresetSidePanel'; // 1. 追加
-import { ResultsBottomPanel } from './components/ResultsBottomPanel'; // 2. 追加
+import { useExperimentConfig } from './hooks/useExperimentConfig'; // 3. 追加
+
+// Components
+import { PresetSidePanel } from './components/PresetSidePanel';
+import { ResultsBottomPanel } from './components/ResultsBottomPanel';
+import { ExperimentConfigForm } from './components/ExperimentConfigForm';
+import { LogViewer } from '../../components/ui/LogViewer'; // LogModal内で使用
+import { CheckCircle, AlertCircle, Loader2, Clock, Settings2, X } from 'lucide-react'; // LogModal内で使用
 
 interface ExperimentLayerProps {
   users: UserAccount[];
@@ -45,113 +29,6 @@ interface ExperimentLayerProps {
   notify: (type: 'success' | 'error', title: string, message: string) => void;
 }
 
-// RangeInput, StrategyCard は ExperimentLayer のローカルに残す（他のコンポーネントでは使われないため）
-const RangeInput: React.FC<{
-  label: string;
-  type: 'data-size' | 'chunk-size';
-  fixedValue: number;
-  rangeParams: { start: number; end: number; step: number };
-  isRange: boolean;
-  disabled?: boolean;
-  unit: string;
-  onChangeFixed: (v: number) => void;
-  onChangeRange: (k: 'start' | 'end' | 'step', v: number) => void;
-  onToggleRange: () => void;
-}> = ({
-  label,
-  fixedValue,
-  rangeParams,
-  isRange,
-  disabled,
-  unit,
-  onChangeFixed,
-  onChangeRange,
-  onToggleRange,
-}) => (
-  <div
-    className={`bg-gray-50 p-5 rounded-2xl border transition-colors hover:border-primary-indigo/30 ${
-      disabled ? 'border-orange-200 bg-orange-50' : 'border-gray-200'
-    }`}
-  >
-    <div className="flex items-center justify-between mb-4">
-      <label className="font-bold text-gray-700 text-base">
-        {label} ({unit})
-      </label>
-      <label
-        className={`inline-flex items-center text-xs cursor-pointer bg-white px-2 py-1 rounded border border-gray-200 shadow-sm ${
-          disabled ? 'opacity-50 cursor-not-allowed' : ''
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={isRange}
-          onChange={onToggleRange}
-          disabled={disabled}
-          className="rounded text-primary-indigo focus:ring-0 w-3 h-3 mr-1"
-        />
-        <span className="text-gray-500 font-medium">範囲指定</span>
-      </label>
-    </div>
-
-    {!isRange ? (
-      <div>
-        <input
-          type="number"
-          value={fixedValue}
-          disabled={disabled}
-          onChange={e => onChangeFixed(Number(e.target.value))}
-          className="param-input block w-full rounded-lg border-gray-200 border p-2.5 focus:border-primary-indigo outline-none text-right font-mono text-lg font-bold disabled:bg-gray-100 disabled:text-gray-400"
-        />
-      </div>
-    ) : (
-      <div className="grid grid-cols-3 gap-2">
-        {(['start', 'end', 'step'] as const).map(field => (
-          <input
-            key={field}
-            type="number"
-            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-            value={rangeParams[field]}
-            onChange={e => onChangeRange(field, Number(e.target.value))}
-            className="param-input border border-gray-200 rounded-lg p-2 text-sm font-mono text-right focus:border-primary-indigo outline-none"
-          />
-        ))}
-      </div>
-    )}
-    {disabled && (
-      <p className="text-xs text-orange-500 mt-2 font-bold flex items-center justify-end">
-        <Lock className="w-3 h-3 mr-1" />
-        アップロード時は固定されます
-      </p>
-    )}
-  </div>
-);
-
-const StrategyCard: React.FC<{
-  label: string;
-  description: string;
-  selected: boolean;
-  onClick: () => void;
-}> = ({ label, description, selected, onClick }) => (
-  <div
-    onClick={onClick}
-    className={`rounded-2xl p-5 relative bg-white cursor-pointer border-2 transition-all duration-200 ${
-      selected ? 'border-primary-indigo bg-indigo-50/30' : 'border-gray-200 hover:border-indigo-200'
-    }`}
-  >
-    <div className="flex justify-between items-start">
-      <div>
-        <div className="font-bold text-gray-800 text-base">{label}</div>
-        <div className="text-xs font-medium text-gray-400 mt-1">{description}</div>
-      </div>
-      {selected && (
-        <div className="text-primary-indigo">
-          <CheckCircle2 className="w-6 h-6 fill-current" />
-        </div>
-      )}
-    </div>
-  </div>
-);
-
 const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   users,
   presets,
@@ -161,87 +38,11 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   onDeletePreset,
   notify,
 }) => {
-  const [mode, setMode] = useState<'virtual' | 'upload'>('virtual');
+  // --- UI States ---
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
 
-  // ボトムパネル用Hooks
-  const {
-    isOpen: isResultsPanelOpen,
-    setIsOpen: setIsResultsPanelOpen,
-    height: panelHeight,
-    panelRef,
-    resizerRef,
-  } = useResizerPanel(320, 100, 0.8);
-
-  const [projectName, setProjectName] = useState('複合パラメータテスト');
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
-
-  const [dataSizeParams, setDataSizeParams] = useState({
-    mode: 'fixed' as 'fixed' | 'range',
-    fixed: 500,
-    range: { start: 100, end: 500, step: 100 },
-  });
-  const [chunkSizeParams, setChunkSizeParams] = useState({
-    mode: 'fixed' as 'fixed' | 'range',
-    fixed: 64,
-    range: { start: 32, end: 128, step: 32 },
-  });
-
-  const [selectedChains, setSelectedChains] = useState<Set<string>>(new Set());
-  const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
-
-  const [selectedAllocators, setSelectedAllocators] = useState<Set<AllocatorStrategy>>(
-    new Set([AllocatorStrategy.ROUND_ROBIN])
-  );
-  const [selectedTransmitters, setSelectedTransmitters] = useState<Set<TransmitterStrategy>>(
-    new Set([TransmitterStrategy.ONE_BY_ONE])
-  );
-
-  const { uploadStats, setUploadStats, fileInputRef, processFiles } = useFileUploadTree(notify);
-
-  const treeContainerRef = useRef<HTMLDivElement>(null);
-
-  // ファイルツリーが表示されたら自動でスクロール
-  useEffect(() => {
-    if (uploadStats.tree && treeContainerRef.current) {
-      setTimeout(() => {
-        treeContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    }
-  }, [uploadStats.tree]);
-
-  const handleFileProcess = async (files: File[]) => {
-    const sizeMB = await processFiles(files);
-    setDataSizeParams(prev => ({ ...prev, mode: 'fixed', fixed: sizeMB }));
-  };
-
-  const {
-    scenarios,
-    isGenerating,
-    isExecutionRunning,
-    generateScenarios,
-    executeScenarios,
-    reprocessCondition,
-    handleRecalculateAll,
-  } = useScenarioExecution(notify, onRegisterResult);
-
-  const handleGenerateClick = () => {
-    generateScenarios({
-      projectName,
-      users,
-      selectedUserId,
-      mode,
-      dataSizeParams,
-      chunkSizeParams,
-      selectedAllocators,
-      selectedTransmitters,
-      selectedChains,
-      setIsOpen: setIsResultsPanelOpen,
-    });
-  };
-
+  // Modal States
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; id: string; reason: string }>({
     isOpen: false,
     id: '',
@@ -250,529 +51,107 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   const [logModal, setLogModal] = useState<{
     isOpen: boolean;
     scenario: ExperimentScenario | null;
-  }>({ isOpen: false, scenario: null });
+  }>({
+    isOpen: false,
+    scenario: null,
+  });
 
-  useEffect(() => {
-    if (deployedNodeCount > 0 && selectedChains.size === 0) {
-      const all = new Set<string>();
-      for (let i = 0; i < deployedNodeCount; i++) all.add(`datachain-${i}`);
-      setSelectedChains(all);
-    }
-    if (users.length > 0 && !selectedUserId) setSelectedUserId(users[0].id);
-  }, [deployedNodeCount, users]);
+  // --- Custom Hooks ---
 
-  const handleSave = () => {
-    if (!newPresetName) {
-      notify('error', 'エラー', 'プリセット名を入力してください');
-      return;
-    }
-    const config: ExperimentConfig = {
-      allocator: Array.from(selectedAllocators)[0],
-      transmitter: Array.from(selectedTransmitters)[0],
-      targetChains: Array.from(selectedChains),
-      uploadType: mode === 'virtual' ? 'Virtual' : 'Real',
-      projectName,
-      userId: selectedUserId,
-      virtualConfig: { sizeMB: dataSizeParams.fixed, chunkSizeKB: chunkSizeParams.fixed, files: 1 },
-    };
-    const generatorState = {
-      projectName,
-      accountValue: selectedUserId,
-      dataSize: {
-        mode: dataSizeParams.mode,
-        fixed: dataSizeParams.fixed,
-        start: dataSizeParams.range.start,
-        end: dataSizeParams.range.end,
-        step: dataSizeParams.range.step,
-      },
-      chunkSize: {
-        mode: chunkSizeParams.mode,
-        fixed: chunkSizeParams.fixed,
-        start: chunkSizeParams.range.start,
-        end: chunkSizeParams.range.end,
-        step: chunkSizeParams.range.step,
-      },
-      allocators: Array.from(selectedAllocators),
-      transmitters: Array.from(selectedTransmitters),
-      selectedChains: Array.from(selectedChains),
-      uploadType: mode === 'virtual' ? 'Virtual' : 'Real',
-    };
+  // 1. Configuration Logic (フォーム状態とプリセット操作)
+  const config = useExperimentConfig(users, deployedNodeCount, notify, onSavePreset);
 
-    onSavePreset(newPresetName, config, generatorState);
+  // 2. Execution Logic (シナリオ生成と実行)
+  const execution = useScenarioExecution(notify, onRegisterResult);
+
+  // 3. Bottom Panel Resizer
+  const bottomPanel = useResizerPanel(320, 100, 0.8);
+
+  // --- Handlers ---
+
+  // 「シナリオを作成」ボタン
+  const handleGenerateClick = () => {
+    // Hookから現在の状態を取得して生成関数に渡す
+    const state = config.getCurrentState();
+    execution.generateScenarios({
+      ...state,
+      users,
+      setIsOpen: bottomPanel.setIsOpen,
+    });
+  };
+
+  // プリセット保存ラッパー (UIの入力値をクリアする処理などを含める場合)
+  const onSaveClick = () => {
+    config.handleSavePreset(newPresetName);
     setNewPresetName('');
   };
 
-  const loadPreset = (s: ExperimentPreset) => {
-    if (s.generatorState) {
-      const gs = s.generatorState;
-      setProjectName(gs.projectName);
-      setSelectedUserId(gs.accountValue);
-      setDataSizeParams({
-        mode: gs.dataSize.mode,
-        fixed: gs.dataSize.fixed,
-        range: { start: gs.dataSize.start, end: gs.dataSize.end, step: gs.dataSize.step },
-      });
-      setChunkSizeParams({
-        mode: gs.chunkSize.mode,
-        fixed: gs.chunkSize.fixed,
-        range: { start: gs.chunkSize.start, end: gs.chunkSize.end, step: gs.chunkSize.step },
-      });
-      setSelectedAllocators(new Set(gs.allocators as AllocatorStrategy[]));
-      setSelectedTransmitters(new Set(gs.transmitters as TransmitterStrategy[]));
-      setSelectedChains(
-        new Set(
-          gs.selectedChains.filter(
-            (c: string) =>
-              !isNaN(parseInt(c.split('-')[1])) && parseInt(c.split('-')[1]) < deployedNodeCount
-          )
-        )
-      );
-      setMode(gs.uploadType === 'Virtual' ? 'virtual' : 'upload');
-    }
-    notify('success', 'ロード完了', `プリセット "${s.name}" を読み込みました`);
-  };
-
-  const selectedUser = users.find(u => u.id === selectedUserId);
-  const successCount = scenarios.filter(c =>
+  // 統計情報 (Bottom Panel Header用)
+  const successCount = execution.scenarios.filter(c =>
     ['READY', 'RUNNING', 'COMPLETE'].includes(c.status)
   ).length;
-  const failCount = scenarios.filter(c => ['FAIL'].includes(c.status)).length;
-  const totalCost = scenarios.reduce((acc, cur) => acc + (cur.cost || 0), 0).toFixed(2);
+  const failCount = execution.scenarios.filter(c => ['FAIL'].includes(c.status)).length;
+  const totalCost = execution.scenarios.reduce((acc, cur) => acc + (cur.cost || 0), 0).toFixed(2);
 
   return (
     <div className="flex h-full w-full overflow-hidden relative text-gray-800">
       <div className="flex w-full h-full relative">
         <div className="flex-1 flex flex-col h-full min-w-0 relative z-10">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-32">
-            <div className="space-y-6">
-              {/* --- 基本設定セクション --- */}
-              <Card className="overflow-hidden rounded-3xl shadow-soft border-gray-100">
-                <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
-                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mr-3 text-primary-indigo">
-                      <Settings2 className="w-5 h-5" />
-                    </div>
-                    基本設定
-                  </h2>
-                  <div className="bg-gray-100 p-1.5 rounded-xl flex text-sm font-bold">
-                    <button
-                      onClick={() => setMode('virtual')}
-                      className={`px-5 py-2 rounded-lg transition-all flex items-center gap-2 ${mode === 'virtual' ? 'bg-white shadow-sm text-primary-indigo' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                    >
-                      <Box className="w-4 h-4" /> 仮想データ
-                    </button>
-                    <button
-                      onClick={() => setMode('upload')}
-                      className={`px-5 py-2 rounded-lg transition-all flex items-center gap-2 ${mode === 'upload' ? 'bg-white shadow-sm text-primary-indigo' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-                    >
-                      <Upload className="w-4 h-4" /> アップロード
-                    </button>
-                  </div>
-                </div>
+            {/* --- メイン設定フォーム --- */}
+            <ExperimentConfigForm
+              // State passed from useExperimentConfig hook
+              mode={config.mode}
+              setMode={config.setMode}
+              projectName={config.projectName}
+              setProjectName={config.setProjectName}
+              users={users}
+              selectedUserId={config.selectedUserId}
+              setSelectedUserId={config.setSelectedUserId}
+              uploadStats={config.uploadStats}
+              setUploadStats={config.setUploadStats}
+              fileInputRef={config.fileInputRef}
+              onFileProcess={config.handleFileProcess}
+              dataSizeParams={config.dataSizeParams}
+              setDataSizeParams={config.setDataSizeParams}
+              chunkSizeParams={config.chunkSizeParams}
+              setChunkSizeParams={config.setChunkSizeParams}
+              deployedNodeCount={deployedNodeCount}
+              selectedChains={config.selectedChains}
+              setSelectedChains={config.setSelectedChains}
+              selectedAllocators={config.selectedAllocators}
+              setSelectedAllocators={config.setSelectedAllocators}
+              selectedTransmitters={config.selectedTransmitters}
+              setSelectedTransmitters={config.setSelectedTransmitters}
+              // Actions
+              isGenerating={execution.isGenerating}
+              onGenerate={handleGenerateClick}
+            />
 
-                <div className="p-6">
-                  {mode === 'virtual' ? (
-                    <div className="flex items-start bg-blue-50 p-6 rounded-2xl border border-blue-100 animate-fade-in">
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-4 shrink-0">
-                        <Info className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-blue-900 mb-1">
-                          仮想データ生成モード
-                        </h3>
-                        <p className="text-base text-blue-700 leading-relaxed opacity-90">
-                          ランダムなバイナリデータを動的に生成して実験を行います。物理的なファイルの準備は不要です。
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="animate-fade-in">
-                      <div
-                        className={`upload-area rounded-3xl h-48 flex flex-col items-center justify-center cursor-pointer mb-6 group relative transition-all hover:bg-indigo-50/30 ${uploadStats.count > 0 ? 'border-primary-indigo' : ''}`}
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          e.currentTarget.classList.add('drag-active');
-                        }}
-                        onDragLeave={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          e.currentTarget.classList.remove('drag-active');
-                        }}
-                        onDrop={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          e.currentTarget.classList.remove('drag-active');
-                          if (e.dataTransfer.files)
-                            handleFileProcess(Array.from(e.dataTransfer.files));
-                        }}
-                      >
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          className="hidden"
-                          multiple
-                          onChange={e =>
-                            e.target.files && handleFileProcess(Array.from(e.target.files))
-                          }
-                          {...({ webkitdirectory: '' } as any)}
-                        />
-                        <div className="bg-white w-20 h-20 rounded-full shadow-lg mb-4 flex items-center justify-center text-primary-indigo group-hover:scale-110 transition-transform duration-300">
-                          <Upload className="w-8 h-8" />
-                        </div>
-                        <p className="text-xl font-bold text-gray-700 pointer-events-none">
-                          フォルダまたはファイルをドロップ
-                        </p>
-                        <p className="text-sm text-gray-400 mt-2 pointer-events-none font-medium">
-                          ※Zipファイルは自動で展開されます
-                        </p>
-                      </div>
-
-                      {uploadStats.tree && (
-                        <div
-                          ref={treeContainerRef}
-                          className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ring-4 ring-gray-50 transition-all duration-300"
-                        >
-                          <div
-                            className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => setUploadStats(p => ({ ...p, treeOpen: !p.treeOpen }))}
-                          >
-                            <div className="flex items-center">
-                              <div className="w-2 h-6 bg-primary-indigo rounded-full mr-3"></div>
-                              <span className="text-lg font-bold text-gray-700">
-                                解析されたディレクトリ構造
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <span className="text-sm font-bold bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100">
-                                {uploadStats.count} Files, {uploadStats.sizeMB} MB
-                              </span>
-                              <ChevronUp
-                                className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${uploadStats.treeOpen ? '' : 'rotate-180'}`}
-                              />
-                            </div>
-                          </div>
-                          <div
-                            className={`transition-max-height duration-300 ease-in-out overflow-hidden ${uploadStats.treeOpen ? 'max-h-80' : 'max-h-0'}`}
-                          >
-                            <div className="p-4 pt-0 font-sans overflow-y-auto max-h-80 custom-scrollbar">
-                              <FileTreeViewer tree={uploadStats.tree} />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* --- パラメータ設定セクション --- */}
-              <Card className="rounded-3xl shadow-soft border-gray-100">
-                <div className="bg-white px-6 py-5 border-b border-gray-100">
-                  <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
-                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3 text-primary-green">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    実験シナリオパラメータ
-                  </h2>
-                </div>
-                <div className="p-6 space-y-8">
-                  {/* Project & Account */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-base font-bold text-gray-700 mb-2 ml-1">
-                        プロジェクト名
-                      </label>
-                      <input
-                        type="text"
-                        value={projectName}
-                        onChange={e => setProjectName(e.target.value)}
-                        className="block w-full rounded-xl border-gray-200 bg-gray-50 p-3.5 focus:ring-2 focus:ring-primary-indigo focus:bg-white outline-none transition-all text-base font-medium shadow-sm"
-                      />
-                    </div>
-                    <div className="relative">
-                      <label className="block text-base font-bold text-gray-700 mb-2 ml-1">
-                        実行アカウント
-                      </label>
-                      <div
-                        onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-                        className="block w-full rounded-xl border border-gray-200 bg-white p-3.5 pr-8 cursor-pointer relative shadow-sm hover:border-primary-indigo transition-colors"
-                      >
-                        <span className="block truncate text-gray-700 font-medium">
-                          {selectedUser
-                            ? `${selectedUser.name} (${selectedUser.balance.toFixed(2)} TKN)`
-                            : 'アカウントを選択...'}
-                        </span>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
-                          <ChevronDown className="w-4 h-4" />
-                        </div>
-                      </div>
-                      {isAccountDropdownOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-20 max-h-60 overflow-y-auto">
-                          {users.map(u => (
-                            <div
-                              key={u.id}
-                              onClick={() => {
-                                setSelectedUserId(u.id);
-                                setIsAccountDropdownOpen(false);
-                              }}
-                              className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${selectedUserId === u.id ? 'bg-indigo-50 text-primary-indigo' : ''}`}
-                            >
-                              <div className="font-bold text-gray-800">{u.name}</div>
-                              <div className="text-xs font-mono text-gray-500 mt-0.5">
-                                {u.balance.toFixed(2)} TKN
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <hr className="border-gray-100" />
-
-                  {/* Numeric Parameters */}
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center ml-1">
-                      <div className="w-1 h-4 bg-gray-300 mr-2 rounded-full"></div> 数値設定
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                      <RangeInput
-                        label="データサイズ"
-                        type="data-size"
-                        unit="MB"
-                        fixedValue={dataSizeParams.fixed}
-                        rangeParams={dataSizeParams.range}
-                        isRange={dataSizeParams.mode === 'range'}
-                        disabled={mode === 'upload'}
-                        onChangeFixed={v => setDataSizeParams(p => ({ ...p, fixed: v }))}
-                        onChangeRange={(k, v) =>
-                          setDataSizeParams(p => ({ ...p, range: { ...p.range, [k]: v } }))
-                        }
-                        onToggleRange={() =>
-                          setDataSizeParams(p => ({
-                            ...p,
-                            mode: p.mode === 'fixed' ? 'range' : 'fixed',
-                          }))
-                        }
-                      />
-                      <RangeInput
-                        label="チャンクサイズ"
-                        type="chunk-size"
-                        unit="KB"
-                        fixedValue={chunkSizeParams.fixed}
-                        rangeParams={chunkSizeParams.range}
-                        isRange={chunkSizeParams.mode === 'range'}
-                        onChangeFixed={v => setChunkSizeParams(p => ({ ...p, fixed: v }))}
-                        onChangeRange={(k, v) =>
-                          setChunkSizeParams(p => ({ ...p, range: { ...p.range, [k]: v } }))
-                        }
-                        onToggleRange={() =>
-                          setChunkSizeParams(p => ({
-                            ...p,
-                            mode: p.mode === 'fixed' ? 'range' : 'fixed',
-                          }))
-                        }
-                      />
-                      {/* Datachain Selection */}
-                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 transition-colors hover:border-primary-indigo/30">
-                        <div className="flex items-center justify-between mb-4">
-                          <label className="font-bold text-gray-700 text-base">Datachain</label>
-                          <span className="text-xs bg-primary-indigo text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
-                            {selectedChains.size}
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <button
-                            onClick={() => setIsChainDropdownOpen(!isChainDropdownOpen)}
-                            className="w-full text-left bg-white border border-gray-200 rounded-lg p-2.5 text-sm flex justify-between items-center hover:bg-gray-50 shadow-sm"
-                          >
-                            <span className="text-gray-600 font-medium">チェーンを選択...</span>
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                          {isChainDropdownOpen && (
-                            <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 ring-1 ring-black/5 rounded-xl shadow-xl z-20 p-3">
-                              <div className="flex justify-end space-x-3 mb-3 border-b border-gray-100 pb-2">
-                                <button
-                                  onClick={() => {
-                                    const all = new Set<string>();
-                                    for (let i = 0; i < deployedNodeCount; i++)
-                                      all.add(`datachain-${i}`);
-                                    setSelectedChains(all);
-                                  }}
-                                  className="text-xs font-bold text-primary-indigo hover:bg-indigo-50 px-2 py-1 rounded"
-                                >
-                                  All
-                                </button>
-                                <button
-                                  onClick={() => setSelectedChains(new Set())}
-                                  className="text-xs font-bold text-gray-500 hover:bg-gray-100 px-2 py-1 rounded"
-                                >
-                                  None
-                                </button>
-                              </div>
-                              <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
-                                {Array.from({ length: deployedNodeCount }).map((_, i) => {
-                                  const id = `datachain-${i}`;
-                                  return (
-                                    <label
-                                      key={id}
-                                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                                    >
-                                      <div className="flex items-center">
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedChains.has(id)}
-                                          onChange={() => {
-                                            const next = new Set(selectedChains);
-                                            next.has(id) ? next.delete(id) : next.add(id);
-                                            setSelectedChains(next);
-                                          }}
-                                          className="rounded text-primary-indigo w-4 h-4 focus:ring-0"
-                                        />
-                                        <span className="ml-3 text-sm font-bold text-gray-700">
-                                          {id}
-                                        </span>
-                                      </div>
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                        Active
-                                      </span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Strategies */}
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center ml-1">
-                      <div className="w-1 h-4 bg-gray-300 mr-2 rounded-full"></div> 配布・送信戦略
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">
-                          Allocator Strategy
-                        </label>
-                        <div className="space-y-4">
-                          <StrategyCard
-                            label="Round Robin"
-                            description="分散アルゴリズム"
-                            selected={selectedAllocators.has(AllocatorStrategy.ROUND_ROBIN)}
-                            onClick={() => {
-                              const s = new Set(selectedAllocators);
-                              s.has(AllocatorStrategy.ROUND_ROBIN) && s.size > 1
-                                ? s.delete(AllocatorStrategy.ROUND_ROBIN)
-                                : s.add(AllocatorStrategy.ROUND_ROBIN);
-                              setSelectedAllocators(s);
-                            }}
-                          />
-                          <StrategyCard
-                            label="Available"
-                            description="空き容量ベース"
-                            selected={selectedAllocators.has(AllocatorStrategy.AVAILABLE)}
-                            onClick={() => {
-                              const s = new Set(selectedAllocators);
-                              s.has(AllocatorStrategy.AVAILABLE) && s.size > 1
-                                ? s.delete(AllocatorStrategy.AVAILABLE)
-                                : s.add(AllocatorStrategy.AVAILABLE);
-                              setSelectedAllocators(s);
-                            }}
-                          />
-                          <StrategyCard
-                            label="Random"
-                            description="ランダム分散"
-                            selected={selectedAllocators.has(AllocatorStrategy.RANDOM)}
-                            onClick={() => {
-                              const s = new Set(selectedAllocators);
-                              s.has(AllocatorStrategy.RANDOM) && s.size > 1
-                                ? s.delete(AllocatorStrategy.RANDOM)
-                                : s.add(AllocatorStrategy.RANDOM);
-                              setSelectedAllocators(s);
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">
-                          Transmitter Strategy
-                        </label>
-                        <div className="space-y-4">
-                          <StrategyCard
-                            label="One By One"
-                            description="1つずつ順次送信"
-                            selected={selectedTransmitters.has(TransmitterStrategy.ONE_BY_ONE)}
-                            onClick={() => {
-                              const s = new Set(selectedTransmitters);
-                              s.has(TransmitterStrategy.ONE_BY_ONE) && s.size > 1
-                                ? s.delete(TransmitterStrategy.ONE_BY_ONE)
-                                : s.add(TransmitterStrategy.ONE_BY_ONE);
-                              setSelectedTransmitters(s);
-                            }}
-                          />
-                          <StrategyCard
-                            label="Multi Burst"
-                            description="並列バースト送信"
-                            selected={selectedTransmitters.has(TransmitterStrategy.MULTI_BURST)}
-                            onClick={() => {
-                              const s = new Set(selectedTransmitters);
-                              s.has(TransmitterStrategy.MULTI_BURST) && s.size > 1
-                                ? s.delete(TransmitterStrategy.MULTI_BURST)
-                                : s.add(TransmitterStrategy.MULTI_BURST);
-                              setSelectedTransmitters(s);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 pb-2">
-                    <button
-                      onClick={handleGenerateClick}
-                      disabled={isGenerating}
-                      className="w-full bg-primary-green hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-emerald-200 transition-all transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center text-xl tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="w-6 h-6 animate-spin mr-3" />
-                      ) : (
-                        <Zap className="w-6 h-6 mr-3" />
-                      )}{' '}
-                      シナリオを作成
-                    </button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Spacer */}
-              <div className="h-[50px] w-full pointer-events-none" aria-hidden="true" />
-            </div>
+            {/* Spacer for Bottom Panel */}
+            <div className="h-[50px] w-full pointer-events-none" aria-hidden="true" />
           </div>
 
-          {/* --- Results Panel (Fixed Bottom) --- */}
+          {/* --- 生成結果パネル (ボトム) --- */}
           <ResultsBottomPanel
-            isOpen={isResultsPanelOpen}
-            setIsOpen={setIsResultsPanelOpen}
-            height={panelHeight}
-            panelRef={panelRef}
-            resizerRef={resizerRef}
-            scenarios={scenarios}
+            isOpen={bottomPanel.isOpen}
+            setIsOpen={bottomPanel.setIsOpen}
+            height={bottomPanel.height}
+            panelRef={bottomPanel.panelRef}
+            resizerRef={bottomPanel.resizerRef}
+            scenarios={execution.scenarios}
             totalCost={totalCost}
             successCount={successCount}
             failCount={failCount}
-            isExecutionRunning={isExecutionRunning}
-            onRecalculateAll={handleRecalculateAll}
-            onExecute={() => executeScenarios(projectName)}
+            isExecutionRunning={execution.isExecutionRunning}
+            onRecalculateAll={execution.handleRecalculateAll}
+            onExecute={() => execution.executeScenarios(config.projectName)}
             onErrorClick={(id, reason) => setErrorModal({ isOpen: true, id, reason })}
-            onReprocess={reprocessCondition}
+            onReprocess={execution.reprocessCondition}
             onLogClick={scenario => setLogModal({ isOpen: true, scenario })}
           />
 
-          {/* Sidebar Toggle Button */}
+          {/* サイドバー開閉ボタン */}
           <button
             onClick={() => setIsPresetPanelOpen(true)}
             className={`absolute top-4 right-0 bg-white border border-gray-200 shadow-lg rounded-l-xl p-3 text-scenario-accent hover:bg-orange-50 transition-all z-20 ${
@@ -783,21 +162,23 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           </button>
         </div>
 
-        {/* --- Sidebar (Preset Panel) --- */}
+        {/* --- プリセット管理サイドバー --- */}
         <PresetSidePanel
           isOpen={isPresetPanelOpen}
           onClose={() => setIsPresetPanelOpen(false)}
           presets={presets}
           newPresetName={newPresetName}
           setNewPresetName={setNewPresetName}
-          onSave={handleSave}
-          onLoad={loadPreset}
+          onSave={onSaveClick}
+          onLoad={config.loadPreset}
           onDelete={onDeletePreset}
           deployedNodeCount={deployedNodeCount}
         />
       </div>
 
-      {/* Error Modal - 変更なし */}
+      {/* --- モーダル定義 --- */}
+
+      {/* Error Modal */}
       <Modal
         isOpen={errorModal.isOpen}
         onClose={() => setErrorModal(p => ({ ...p, isOpen: false }))}
@@ -828,7 +209,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
         </div>
       </Modal>
 
-      {/* Log Modal - 変更なし */}
+      {/* Log Modal */}
       <Modal
         isOpen={logModal.isOpen}
         onClose={() => setLogModal(p => ({ ...p, isOpen: false }))}
