@@ -479,7 +479,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
                           <div
                             className={`transition-max-height duration-300 ease-in-out overflow-hidden ${uploadStats.treeOpen ? 'max-h-80' : 'max-h-0'}`}
                           >
-                            <div className="p-4 font-sans overflow-y-auto max-h-80 custom-scrollbar">
+                            <div className="p-4 pt-0 font-sans overflow-y-auto max-h-80 custom-scrollbar">
                               {/* コンポーネントを使用 */}
                               <FileTreeViewer tree={uploadStats.tree} />
                             </div>

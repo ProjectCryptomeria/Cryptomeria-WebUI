@@ -118,7 +118,7 @@ export const FileTreeViewer = ({ tree }: { tree: any }) => {
   return (
     <div className="flex flex-col h-full font-sans">
       {/* コントロールヘッダー */}
-      <div className="flex justify-end mb-2 pb-2 border-b border-slate-50 sticky top-0 bg-white/90 backdrop-blur z-10">
+      <div className="flex justify-end mb-2 py-2 border-b border-slate-50 sticky top-0 bg-white/90 backdrop-blur z-10">
         <div className="flex gap-2">
           <button
             onClick={() => setGlobalToggle({ expanded: true, timestamp: Date.now() })}
