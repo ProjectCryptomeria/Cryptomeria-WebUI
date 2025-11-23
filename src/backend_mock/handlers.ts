@@ -1,7 +1,8 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/mocks/handlers.ts
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/backend_mock/handlers.ts
 
 import { http, HttpResponse, delay } from 'msw';
 import { MockServer } from './MockServer';
+import { getFeeConstants } from './mockData';
 
 /**
  * MSW Handlers
@@ -80,12 +81,31 @@ export const handlers = [
     await delay(200);
     const config = await request.json();
 
-    // 簡易試算ロジック
-    const sizeMB = config.virtualConfig?.sizeMB || config.realConfig?.totalSizeMB || 0;
-    const chainCount = config.targetChains?.length || 1;
-    const cost = sizeMB * 0.5 + chainCount * 10;
+    const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
 
-    return HttpResponse.json({ cost, isBudgetSufficient: true });
+    // 修正: ExperimentConfig(ネスト) と ExperimentScenario(フラット) の両方に対応
+    const sizeMB =
+      config.dataSize || // フラットな構造 (Scenario) を優先チェック
+      config.virtualConfig?.sizeMB ||
+      config.realConfig?.totalSizeMB ||
+      0;
+
+    const gasUsed = sizeMB * gasUsedPerMB;
+
+    // 2. Base Feeに±12.5%の変動を適用
+    const fluctuation = 1 + (Math.random() * 0.25 - 0.125); // -12.5% から +12.5%
+    const currentBaseFee = baseGasPrice * fluctuation;
+
+    // 3. Total Feeを計算: Gas Used × (Base Fee + Priority Fee)
+    const totalFee = gasUsed * (currentBaseFee + priorityFee);
+
+    // 4. 見積もりコストをTotal Feeの1.5倍とし、小数点以下2桁に丸める
+    const estimatedCost = parseFloat((totalFee * 1.5).toFixed(2));
+
+    // 見積もりコストは最低1.0 TKNを保証
+    const finalEstimatedCost = Math.max(1.0, estimatedCost);
+
+    return HttpResponse.json({ cost: finalEstimatedCost, isBudgetSufficient: true });
   }),
 
   http.post('/api/experiment/run', async ({ request }: any) => {

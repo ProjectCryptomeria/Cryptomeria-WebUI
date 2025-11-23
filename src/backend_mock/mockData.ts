@@ -6,6 +6,27 @@ import { ExperimentPreset, ExperimentResult, UserAccount, SystemAccount } from '
  * バックエンドAPIが存在しないため、フロントエンドのみで動作確認可能なダミーデータを生成します。
  */
 
+// --- Fee Calculation Constants ---
+// TKN単位とする。
+export const BASE_GAS_PRICE = 0.00005; // 1 Gasあたりの基本価格 (TKN/Gas)
+export const PRIORITY_FEE = 0.0002; // 1 Gasあたりの優先手数料 (TKN/Gas)
+export const GAS_USED_PER_MB = 1000; // 1MBあたりに消費されるガス量 (Gas/MB)
+
+/**
+ * Fee計算に必要な定数をエクスポートします。
+ */
+export interface FeeConstants {
+  baseGasPrice: number;
+  priorityFee: number;
+  gasUsedPerMB: number;
+}
+
+export const getFeeConstants = (): FeeConstants => ({
+  baseGasPrice: BASE_GAS_PRICE,
+  priorityFee: PRIORITY_FEE,
+  gasUsedPerMB: GAS_USED_PER_MB,
+});
+
 // 監視画面用: ノードリスト生成
 // 指定された数のDataChainと、固定のControl/MetaChainを生成します。
 export const generateMockNodes = (count: number): NodeStatus[] => {

@@ -10,7 +10,7 @@ import {
   PacketEvent,
   MempoolInfo,
   ExperimentPreset,
-  ExecutionResultDetails, // 追加
+  ExecutionResultDetails,
 } from '../types';
 import {
   generateMockNodes,
@@ -18,6 +18,7 @@ import {
   generateSystemAccounts,
   generateMockResults,
   generateMockPresets,
+  getFeeConstants,
 } from './mockData';
 
 /**
@@ -82,6 +83,13 @@ class MockServerInstance {
   private results: ExperimentResult[] = [];
   private presets: ExperimentPreset[] = [];
 
+  // Base Feeの状態を保持
+  private currentBaseFee: number = getFeeConstants().baseGasPrice;
+  private baseFeeChangeRatio: number = 0;
+  private baseFeeHistory: number[] = []; // 直近のBase Fee履歴
+  private nextBaseFee: number = this.currentBaseFee;
+  private averageBaseFee: number = this.currentBaseFee;
+
   private intervals: any[] = [];
   private subscribers: { [url: string]: ((data: any) => void)[] } = {};
 
@@ -100,6 +108,8 @@ class MockServerInstance {
       name: `data-${i}`,
       txs: Math.floor(Math.random() * 50),
     }));
+    // 初期履歴の生成
+    this.baseFeeHistory = Array(10).fill(this.currentBaseFee);
   }
 
   // --- Event Loop (Heartbeat) ---
@@ -108,10 +118,15 @@ class MockServerInstance {
     this.intervals.push(
       setInterval(() => {
         this.updateNodes();
+        // Base Fee 情報をブロードキャストに追加
         this.broadcast('/ws/monitoring', {
           nodes: this.nodes,
           mempool: this.mempool,
           deployedCount: this.deployedNodeCount,
+          currentBaseFee: this.currentBaseFee,
+          baseFeeChangeRatio: this.baseFeeChangeRatio,
+          nextBaseFee: this.nextBaseFee,
+          averageBaseFee: this.averageBaseFee,
         } as MonitoringUpdate);
       }, 1000)
     );
@@ -156,6 +171,33 @@ class MockServerInstance {
       ...m,
       txs: Math.max(0, m.txs + (Math.random() > 0.5 ? 5 : -10) + Math.floor(Math.random() * 5)),
     }));
+
+    // 1. 現在のBase Feeを履歴に追加 (最大10件)
+    this.baseFeeHistory.push(this.currentBaseFee);
+    if (this.baseFeeHistory.length > 10) {
+      this.baseFeeHistory.shift();
+    }
+
+    // 2. 直近10件の平均値を計算
+    const sum = this.baseFeeHistory.reduce((acc, val) => acc + val, 0);
+    this.averageBaseFee = parseFloat((sum / this.baseFeeHistory.length).toFixed(3));
+
+    // 3. Base Feeのランダム変動 (±12.5%の変動率に基づいて更新)
+    // ここで算出する値が「次のブロック(Next)」の値となるシミュレーション
+    // 現実的にはブロック生成ごとにCurrentが更新されるが、ここではTickごとに未来を予測生成して更新する流れ
+    const oldBaseFee = this.currentBaseFee;
+    const fluctuation = Math.random() * 0.25 - 0.125; // -12.5% から +12.5%
+    const calculatedNext = Math.max(0.01, oldBaseFee * (1 + fluctuation)); // 最低値 0.01 を保証
+
+    // Currentを更新
+    this.currentBaseFee = parseFloat(calculatedNext.toFixed(3));
+    this.baseFeeChangeRatio = parseFloat(((calculatedNext / oldBaseFee - 1) * 100).toFixed(1));
+
+    // Next(さらに次の予測)は、現在のトレンドを少し反映させて計算
+    const nextFluctuation = Math.random() * 0.1 - 0.05;
+    this.nextBaseFee = parseFloat(
+      Math.max(0.01, this.currentBaseFee * (1 + nextFluctuation)).toFixed(3)
+    );
   }
 
   // --- Pub/Sub System ---
@@ -165,7 +207,16 @@ class MockServerInstance {
     this.subscribers[baseUrl].push(callback);
 
     if (baseUrl === '/ws/monitoring') {
-      callback({ nodes: this.nodes, mempool: this.mempool, deployedCount: this.deployedNodeCount });
+      // 初期ロード時にもFee情報を含める
+      callback({
+        nodes: this.nodes,
+        mempool: this.mempool,
+        deployedCount: this.deployedNodeCount,
+        currentBaseFee: this.currentBaseFee,
+        baseFeeChangeRatio: this.baseFeeChangeRatio,
+        nextBaseFee: this.nextBaseFee,
+        averageBaseFee: this.averageBaseFee,
+      });
     }
 
     return () => {
@@ -277,6 +328,8 @@ class MockServerInstance {
    * 順番に実行し、資金の引き落としと返金を行う
    */
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
+    const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
+
     for (const scenario of scenarios) {
       // 準備完了以外のステータスはスキップ
       if (scenario.status !== 'READY') continue;
@@ -306,17 +359,30 @@ class MockServerInstance {
       });
       await new Promise(r => setTimeout(r, 800));
 
+      // 2. 実行完了後: 実コスト計算と返金 (Refund)
+
+      // 実際のGas Usedを計算 (データサイズベース)
+      const actualGasUsed = scenario.dataSize * gasUsedPerMB;
+
+      // Base Feeの変動をシミュレート（実行時にも再度変動する）
+      const fluctuation = 1 + (Math.random() * 0.25 - 0.125); // -12.5% から +12.5%
+      const currentBaseFee = baseGasPrice * fluctuation;
+
+      // 実際の Total Fee を計算: Gas Used × (Base Fee + Priority Fee)
+      let actualTotalFee = actualGasUsed * (currentBaseFee + priorityFee);
+
       // 成功/失敗のランダム判定
       const success = Math.random() > 0.15;
       const status = success ? 'COMPLETE' : 'FAIL';
       let log = '';
 
-      // 2. 実行完了後: 実コスト計算と返金 (Refund)
-      // 実際にかかったコストをランダムに計算 (試算の 80% ~ 110%)
-      // 失敗時はガスコストのみ消費したとして、試算の10%程度とする
-      const actualCost = success
-        ? parseFloat((scenario.cost * (0.8 + Math.random() * 0.3)).toFixed(2))
-        : parseFloat((scenario.cost * 0.1).toFixed(2));
+      // 失敗時は、Total Feeはガス代の10%程度に留める（失敗時の処理コストを表現）
+      if (!success) {
+        actualTotalFee = actualTotalFee * (0.08 + Math.random() * 0.04); // 8%から12%の範囲で乗算
+      }
+
+      // 実際にかかったコスト（TKN）。最低コスト1.0 TKNを保証
+      const actualCost = parseFloat(Math.max(1.0, actualTotalFee).toFixed(2));
 
       const refund = parseFloat((scenario.cost - actualCost).toFixed(2));
 

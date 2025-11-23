@@ -3,20 +3,25 @@
 import React from 'react';
 import { AppLayer } from '../../types';
 import { NAV_ITEMS } from '../../utils/constants';
-import { ChevronRight, Info, Loader2 } from 'lucide-react'; // Loader2 追加
+import { ChevronRight, Info, Loader2, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 
 interface SidebarProps {
   activeLayer: AppLayer;
   setActiveLayer: (layer: AppLayer) => void;
-  // 追加: 実行中フラグを受け取る
   isExecutionRunning?: boolean;
+  baseFeeInfo: { current: number; change: number; next: number; average: number } | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeLayer,
   setActiveLayer,
   isExecutionRunning,
+  baseFeeInfo,
 }) => {
+  const isUp = baseFeeInfo && baseFeeInfo.change >= 0;
+  const changeColor = baseFeeInfo ? (isUp ? 'text-red-400' : 'text-emerald-400') : 'text-slate-500';
+  const ChangeIcon = isUp ? TrendingUp : TrendingDown;
+
   return (
     <nav className="w-72 bg-white flex flex-col py-8 px-4 gap-2 shrink-0 overflow-y-auto border-r border-slate-100">
       <div className="px-4 mb-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
@@ -53,7 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* 変更: Experiment項目で実行中の場合にスピナーを表示 */}
             {item.id === AppLayer.EXPERIMENT && isExecutionRunning ? (
               <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
             ) : (
@@ -63,30 +67,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
         );
       })}
 
-      {/* ...以下既存コード (Cluster Infoなど) ... */}
       <div className="mt-auto pt-8 px-2">
         <div className="bg-slate-900 p-5 rounded-3xl shadow-xl relative overflow-hidden group cursor-default">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
             <Info className="w-16 h-16 text-white" />
           </div>
           <div className="relative z-10">
-            <div className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
-              Cluster Info
+            <div className="flex items-center gap-2 mb-3 text-slate-300">
+              <Zap className="w-4 h-4 text-yellow-400" />
+              <div className="text-xs font-bold uppercase tracking-wider">Base Fee Status</div>
             </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Provider</span>
-                <span className="font-bold text-slate-200">Minikube</span>
+
+            {/* Base Fee Metrics Grid */}
+            {baseFeeInfo ? (
+              <div className="grid grid-cols-2 gap-2 mb-0">
+                {' '}
+                {/* mb-4 -> mb-0 に変更 (下の要素削除に伴い) */}
+                {/* Current */}
+                <div className="col-span-2 bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                    Current Block
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`font-bold text-lg ${changeColor}`}>
+                      {baseFeeInfo.current.toFixed(3)}
+                    </span>
+                    <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded-lg">
+                      <ChangeIcon className={`w-3 h-3 ${changeColor}`} />
+                      <span className={`text-[10px] font-mono ${changeColor}`}>
+                        {Math.abs(baseFeeInfo.change)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-slate-500 text-right mt-0.5">TKN / Gas</div>
+                </div>
+                {/* Next */}
+                <div className="bg-slate-800/50 rounded-xl p-2.5 border border-slate-700/50">
+                  <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Next</div>
+                  <div className="font-mono font-bold text-slate-300 text-sm">
+                    {baseFeeInfo.next.toFixed(3)}
+                  </div>
+                </div>
+                {/* Average */}
+                <div className="bg-slate-800/50 rounded-xl p-2.5 border border-slate-700/50">
+                  <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Avg (10)</div>
+                  <div className="font-mono font-bold text-blue-300 text-sm">
+                    {baseFeeInfo.average.toFixed(3)}
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Ver</span>
-                <span className="font-bold text-slate-200">v1.28.3</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Memory</span>
-                <span className="font-bold text-emerald-400">8192MB</span>
-              </div>
-            </div>
+            ) : (
+              <div className="text-center py-4 text-slate-500 text-xs">Loading Fee Data...</div>
+            )}
+
+            {/* 不要な Minikube / Memory 情報を削除しました */}
           </div>
         </div>
       </div>

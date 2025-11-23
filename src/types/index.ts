@@ -36,6 +36,10 @@ export interface MonitoringUpdate {
   nodes: NodeStatus[];
   mempool: MempoolInfo[];
   deployedCount: number;
+  currentBaseFee: number; // Base Feeの現在の値
+  baseFeeChangeRatio: number; // 前回の値からの変動率 (%)
+  nextBaseFee: number; // 次のブロックの予測値
+  averageBaseFee: number; // 直近10ブロックの平均値
 }
 
 export interface PacketEvent {

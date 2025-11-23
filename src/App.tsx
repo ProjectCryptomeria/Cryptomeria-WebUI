@@ -18,16 +18,40 @@ import {
   ExperimentPreset,
   ExperimentResult,
   ExperimentScenario,
+  MonitoringUpdate,
 } from './types';
 import { Modal } from './components/ui/Modal';
 import { LogViewer } from './components/ui/LogViewer';
 import { Loader2, CheckCircle, AlertCircle, Clock, X } from 'lucide-react';
+import { useWebSocket } from './hooks/useWebSocket';
 
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
   const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5);
   const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);
+
+  // Base Feeの状態管理 (拡張: next, average)
+  const [baseFeeInfo, setBaseFeeInfo] = useState<{
+    current: number;
+    change: number;
+    next: number;
+    average: number;
+  } | null>(null);
+
+  // WebSocketからBase Feeのモニタリングデータを受信
+  useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
+    if (data.currentBaseFee !== undefined) {
+      setBaseFeeInfo({
+        current: data.currentBaseFee,
+        change: data.baseFeeChangeRatio || 0,
+        next: data.nextBaseFee || data.currentBaseFee,
+        average: data.averageBaseFee || data.currentBaseFee,
+      });
+    }
+    // MonitoringLayerと重複するが、ここではBaseFee取得に特化し、他はLayerに任せる
+    setDeployedNodeCount(data.deployedCount);
+  });
 
   const {
     toasts,
@@ -137,7 +161,8 @@ const App: React.FC = () => {
         isExecutionRunning={execution.isExecutionRunning}
         execution={execution}
         onLogClick={handleLogClick}
-        users={users} // 追加: Headerで使用するため渡す
+        users={users}
+        baseFeeInfo={baseFeeInfo}
       >
         {(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
           <div className="absolute inset-0 overflow-hidden">
