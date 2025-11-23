@@ -9,6 +9,7 @@ import {
   PlayCircle,
   Settings2,
   CheckCircle2,
+  Clock, // 実行待機中アイコンとしてClockを追加
 } from 'lucide-react';
 import { BottomPanel } from '../../../components/ui/BottomPanel';
 
@@ -24,6 +25,8 @@ interface ResultsBottomPanelProps {
   successCount: number;
   failCount: number;
   isExecutionRunning: boolean;
+  // [修正] 新しいカウント値を追加
+  pendingCount: number;
 
   onRecalculateAll: () => void;
   onExecute: () => void;
@@ -43,6 +46,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
   successCount,
   failCount,
   isExecutionRunning,
+  pendingCount, // [修正] Propsに追加
   onRecalculateAll,
   onExecute,
   onErrorClick,
@@ -75,12 +79,23 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
       {/* Status Bar & Execute */}
       <div className="px-8 py-3 bg-indigo-50/50 border-b border-indigo-50 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center space-x-8 text-sm">
+          {/* [修正] 1. 実行待機中数 (Pending + Calculating + Ready) */}
+          <div className="flex items-center text-status-ready bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+            <Clock className="w-5 h-5 mr-2" />
+            <span className="font-bold text-lg">{pendingCount}</span>
+            <span className="text-xs text-status-ready font-bold ml-1.5 uppercase">待機中</span>
+          </div>
+          <div className="h-6 w-px bg-gray-300"></div>
+
+          {/* 2. 成功数 */}
           <div className="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
             <CheckCircle className="w-5 h-5 mr-2" />
             <span className="font-bold text-lg">{successCount}</span>
-            <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">成功</span>
+            <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">完了</span>
           </div>
           <div className="h-6 w-px bg-gray-300"></div>
+
+          {/* 3. 失敗数 */}
           <div className="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
             <AlertCircle className="w-5 h-5 mr-2" />
             <span className="font-bold text-lg">{failCount}</span>
@@ -101,9 +116,11 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           )}
           <button
             onClick={onExecute}
-            disabled={scenarios.length === 0 || isExecutionRunning || successCount === 0}
+            // [修正] disabled判定を修正: isExecutionRunning中か、実行待機中(READY以上)のシナリオが0件の場合に無効化
+            // 実行ボタンは、READY以上のシナリオが1件以上あれば押せるべき
+            disabled={isExecutionRunning || pendingCount === 0}
             className="bg-gray-300 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm flex items-center disabled:opacity-50 data-[ready=true]:bg-primary-indigo data-[ready=true]:hover:bg-indigo-700 data-[ready=true]:hover:shadow-md transition-all transform active:scale-95"
-            data-ready={successCount > 0 && !isExecutionRunning}
+            data-ready={pendingCount > 0 && !isExecutionRunning} // 実行可能なシナリオがある場合にスタイルを適用
           >
             {isExecutionRunning ? (
               <Loader2 className="w-5 h-5 animate-spin mr-2" />

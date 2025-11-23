@@ -202,7 +202,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                             {node.id}
                           </div>
                           <div className="text-[12px] text-slate-400 font-mono">
-                            レイテンシ: {node.latency}ms
+                            Latency: {node.latency}ms
                           </div>
                         </div>
                       </div>

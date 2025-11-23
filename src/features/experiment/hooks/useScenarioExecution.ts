@@ -32,7 +32,7 @@ export const useScenarioExecution = (
 
     if (msg.type === 'ALL_COMPLETE') {
       setIsExecutionRunning(false);
-      notify('success', '実行開始', `シナリオ #${msg.scenarioId} の実行を開始しました。`);
+      // [修正] 全完了通知は、ここでは不要なので削除
       return;
     }
 
@@ -40,6 +40,12 @@ export const useScenarioExecution = (
       prev.map(s => {
         if (s.id === msg.scenarioId) {
           const nextLogs = msg.log ? [...s.logs, msg.log] : s.logs;
+
+          // [修正] RUNNING ステータスに遷移したときに通知を出す
+          if (msg.status === 'RUNNING' && s.status !== 'RUNNING') {
+            notify('success', '実行開始', `シナリオ #${s.id} の実行を開始しました。`);
+          }
+
           return {
             ...s,
             status: (msg.status as any) || s.status,

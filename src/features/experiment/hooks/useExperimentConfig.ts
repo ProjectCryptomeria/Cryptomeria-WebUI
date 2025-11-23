@@ -34,7 +34,7 @@ export const useExperimentConfig = (
 
 	// --- State Definitions ---
 	const [mode, setMode] = useState<'virtual' | 'upload'>('virtual');
-	const [projectName, setProjectName] = useState('複合パラメータテスト');
+	const [projectName, setProjectName] = useState('アップロードテスト');
 	const [selectedUserId, setSelectedUserId] = useState<string>('');
 
 	const [dataSizeParams, setDataSizeParams] = useState({
