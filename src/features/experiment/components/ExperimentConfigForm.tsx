@@ -106,10 +106,10 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   }, [uploadStats.tree]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mb-10">
       {/* --- 基本設定セクション --- */}
       <Card className="overflow-hidden rounded-3xl shadow-soft border-gray-100">
-        <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+        <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center rounded-t-3xl">
           <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
             <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mr-3 text-primary-indigo">
               <Settings2 className="w-5 h-5" />
@@ -235,7 +235,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
 
       {/* --- パラメータ設定セクション --- */}
       <Card className="rounded-3xl shadow-soft border-gray-100">
-        <div className="bg-white px-6 py-5 border-b border-gray-100">
+        <div className="bg-white px-6 py-5 border-b border-gray-100 rounded-t-3xl">
           <h2 className="text-xl font-bold text-gray-800 flex items-center tracking-tight">
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3 text-primary-green">
               <Zap className="w-5 h-5" />
