@@ -3,6 +3,13 @@
 import { http, HttpResponse, delay } from 'msw';
 import { MockServer } from './MockServer';
 import { getFeeConstants } from './mockData';
+import { z } from 'zod';
+
+// Schemas
+import { EstimateRequestSchema, RunExperimentRequestSchema } from '@/entities/scenario';
+import { FaucetRequestSchema } from '@/entities/account/model/schemas';
+import { ScaleRequestSchema } from '@/entities/deployment';
+import { ExperimentPreset } from '@/entities/preset';
 
 /**
  * MSW Handlers
@@ -19,14 +26,21 @@ export const handlers = [
 
   http.post('/api/deployment/scale', async ({ request }: any) => {
     await delay(500);
-    const { replicaCount } = await request.json();
 
-    if (!replicaCount || replicaCount < 0) {
-      return HttpResponse.json({ error: 'Invalid replicaCount' }, { status: 400 });
+    try {
+      const body = await request.json();
+      // Zodバリデーション
+      const { replicaCount } = ScaleRequestSchema.parse(body);
+
+      await MockServer.scaleCluster(replicaCount);
+      return HttpResponse.json({ status: 'accepted' }, { status: 202 });
+    } catch (error) {
+      // ZodErrorの場合は詳細を返す
+      if (error instanceof z.ZodError) {
+        return HttpResponse.json({ error: 'Validation Error', details: error.issues }, { status: 400 });
+      }
+      return HttpResponse.json({ error: 'Invalid request', details: error }, { status: 400 });
     }
-
-    await MockServer.scaleCluster(replicaCount);
-    return HttpResponse.json({ status: 'accepted' }, { status: 202 });
   }),
 
   http.delete('/api/deployment/reset', async () => {
@@ -62,16 +76,19 @@ export const handlers = [
 
   http.post('/api/economy/faucet', async ({ request }: any) => {
     await delay(300);
-    const { targetId, amount } = await request.json();
-
-    if (!targetId) {
-      return HttpResponse.json({ error: 'targetId is required' }, { status: 400 });
-    }
 
     try {
-      const result = await MockServer.faucet(targetId, amount || 100);
+      const body = await request.json();
+      // Zodバリデーション
+      const { targetId, amount } = FaucetRequestSchema.parse(body);
+
+      const result = await MockServer.faucet(targetId, amount);
       return HttpResponse.json(result);
-    } catch (e) {
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        // 修正: e.errors -> e.issues
+        return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });
+      }
       return HttpResponse.json({ error: (e as Error).message }, { status: 400 });
     }
   }),
@@ -79,45 +96,58 @@ export const handlers = [
   // --- Experiment Layer ---
   http.post('/api/experiment/estimate', async ({ request }: any) => {
     await delay(200);
-    const config = await request.json();
 
-    const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
+    try {
+      const body = await request.json();
+      // Zodバリデーション
+      const config = EstimateRequestSchema.parse(body);
 
-    // 修正: ExperimentConfig(ネスト) と ExperimentScenario(フラット) の両方に対応
-    const sizeMB =
-      config.dataSize || // フラットな構造 (Scenario) を優先チェック
-      config.virtualConfig?.sizeMB ||
-      config.realConfig?.totalSizeMB ||
-      0;
+      const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
 
-    const gasUsed = sizeMB * gasUsedPerMB;
+      let sizeMB = 0;
+      // Union型の処理
+      if ('dataSize' in config) {
+        sizeMB = config.dataSize;
+      } else if ('virtualConfig' in config && config.virtualConfig) {
+        sizeMB = config.virtualConfig.sizeMB;
+      } else if ('realConfig' in config && config.realConfig) {
+        sizeMB = config.realConfig.totalSizeMB;
+      }
 
-    // 2. Base Feeに±12.5%の変動を適用
-    const fluctuation = 1 + (Math.random() * 0.25 - 0.125); // -12.5% から +12.5%
-    const currentBaseFee = baseGasPrice * fluctuation;
+      const gasUsed = sizeMB * gasUsedPerMB;
+      const fluctuation = 1 + (Math.random() * 0.25 - 0.125);
+      const currentBaseFee = baseGasPrice * fluctuation;
+      const totalFee = gasUsed * (currentBaseFee + priorityFee);
+      const estimatedCost = parseFloat((totalFee * 1.5).toFixed(2));
+      const finalEstimatedCost = Math.max(1.0, estimatedCost);
 
-    // 3. Total Feeを計算: Gas Used × (Base Fee + Priority Fee)
-    const totalFee = gasUsed * (currentBaseFee + priorityFee);
+      return HttpResponse.json({ cost: finalEstimatedCost, isBudgetSufficient: true });
 
-    // 4. 見積もりコストをTotal Feeの1.5倍とし、小数点以下2桁に丸める
-    const estimatedCost = parseFloat((totalFee * 1.5).toFixed(2));
-
-    // 見積もりコストは最低1.0 TKNを保証
-    const finalEstimatedCost = Math.max(1.0, estimatedCost);
-
-    return HttpResponse.json({ cost: finalEstimatedCost, isBudgetSufficient: true });
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });
+      }
+      console.error(e);
+      return HttpResponse.json({ error: 'Invalid configuration for estimate' }, { status: 400 });
+    }
   }),
 
   http.post('/api/experiment/run', async ({ request }: any) => {
     await delay(200);
-    const { scenarios } = await request.json();
 
-    if (!scenarios || !Array.isArray(scenarios)) {
-      return HttpResponse.json({ error: 'Invalid scenarios' }, { status: 400 });
+    try {
+      const body = await request.json();
+      // Zodバリデーション
+      const { scenarios } = RunExperimentRequestSchema.parse(body);
+
+      const result = await MockServer.runExperiment(scenarios as any);
+      return HttpResponse.json(result, { status: 202 });
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });
+      }
+      return HttpResponse.json({ error: 'Invalid scenarios data', details: e }, { status: 400 });
     }
-
-    const result = await MockServer.runExperiment(scenarios);
-    return HttpResponse.json(result, { status: 202 });
   }),
 
   // --- Library Layer ---
@@ -148,7 +178,8 @@ export const handlers = [
 
   http.post('/api/presets', async ({ request }: any) => {
     await delay(300);
-    const preset = await request.json();
+    // Presetのバリデーションは構造が複雑なため今回はスキップ
+    const preset = await request.json() as ExperimentPreset;
     const saved = await MockServer.savePreset(preset);
     return HttpResponse.json(saved);
   }),
