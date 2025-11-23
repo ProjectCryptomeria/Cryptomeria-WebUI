@@ -61,7 +61,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
           {(['start', 'end', 'step'] as const).map(field => (
             <div key={field}>
               <div className="text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 tracking-wider">
-                {field}
+                {field === 'start' ? '開始' : field === 'end' ? '終了' : 'ステップ'}
               </div>
               <input
                 type="number"

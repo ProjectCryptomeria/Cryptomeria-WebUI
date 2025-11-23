@@ -98,7 +98,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-32">
             {/* --- Header Added Here --- */}
             <PageHeader
-              title="Experiment Execution"
+              title="実験実行"
               description="実験シナリオのパラメータ設定と実行、バッチ処理の管理"
               icon={TestTube}
               iconColor="text-scenario-accent"
@@ -206,7 +206,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           <p className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wide">
             ID: {errorModal.id}
           </p>
-          <p className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide">Reason</p>
+          <p className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide">理由</p>
           <p className="text-red-600 font-medium bg-red-50 p-4 rounded-xl border border-red-100 text-base leading-relaxed shadow-sm">
             {errorModal.reason}
           </p>
@@ -256,7 +256,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
         </div>
         <div className="px-8 py-4 border-b border-gray-100 bg-gray-50/50">
           <div className="flex justify-between items-center text-sm mb-2">
-            <span className="font-bold text-gray-500">Progress</span>
+            <span className="font-bold text-gray-500">進捗</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div

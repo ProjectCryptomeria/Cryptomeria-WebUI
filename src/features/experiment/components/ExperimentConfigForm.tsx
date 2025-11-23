@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AllocatorStrategy, TransmitterStrategy, UserAccount, NodeStatus } from '../../../types';
-import { Settings2, Box, Upload, Zap, Info, Server, Loader2, ChevronDown } from 'lucide-react';
+import { Settings2, Box, Upload, Zap, Info, ChevronDown, Loader2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { RangeInput } from './RangeInput';
 import { StrategyCard } from './StrategyCard';
@@ -213,7 +213,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-sm font-bold bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full border border-indigo-100">
-                        {uploadStats.count} Files, {uploadStats.sizeMB} MB
+                        {uploadStats.count} ファイル, {uploadStats.sizeMB} MB
                       </span>
                     </div>
                   </div>
@@ -356,7 +356,8 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
               setChainRangeParams={setChainRangeParams}
               mode={chainMode}
               setMode={setChainMode}
-              disabled={mode === 'upload'}
+              // 修正: アップロードモードでもChainSelectorをロックしないように変更 (disabled={false}と同等)
+              // disabled={mode === 'upload'}
             />
           </div>
 
@@ -368,11 +369,11 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">
-                  Allocator Strategy
+                  アロケータ戦略
                 </label>
                 <div className="space-y-4">
                   <StrategyCard
-                    label="Round Robin"
+                    label="ラウンドロビン"
                     description="分散アルゴリズム"
                     selected={selectedAllocators.has(AllocatorStrategy.ROUND_ROBIN)}
                     onClick={() => {
@@ -384,7 +385,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     }}
                   />
                   <StrategyCard
-                    label="Available"
+                    label="空き容量優先"
                     description="空き容量ベース"
                     selected={selectedAllocators.has(AllocatorStrategy.AVAILABLE)}
                     onClick={() => {
@@ -396,7 +397,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     }}
                   />
                   <StrategyCard
-                    label="Random"
+                    label="ランダム"
                     description="ランダム分散"
                     selected={selectedAllocators.has(AllocatorStrategy.RANDOM)}
                     onClick={() => {
@@ -411,11 +412,11 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">
-                  Transmitter Strategy
+                  送信戦略
                 </label>
                 <div className="space-y-4">
                   <StrategyCard
-                    label="One By One"
+                    label="順次送信"
                     description="1つずつ順次送信"
                     selected={selectedTransmitters.has(TransmitterStrategy.ONE_BY_ONE)}
                     onClick={() => {
@@ -427,7 +428,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
                     }}
                   />
                   <StrategyCard
-                    label="Multi Burst"
+                    label="マルチバースト"
                     description="並列バースト送信"
                     selected={selectedTransmitters.has(TransmitterStrategy.MULTI_BURST)}
                     onClick={() => {

@@ -101,10 +101,10 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
             <Server className="w-5 h-5" />
           </div>
           <div>
-            <label className="font-bold text-gray-700 text-lg block">Target Chains</label>
+            <label className="font-bold text-gray-700 text-lg block">対象チェーン</label>
             <div className="text-xs text-gray-400 font-medium mt-0.5">
               選択中: <span className="text-indigo-600 font-bold">{selectedChains.size}</span> /{' '}
-              {activeDataNodes.length} Active Nodes
+              {activeDataNodes.length} 稼働ノード
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
           <span
             className={`text-xs font-bold ${mode === 'range' ? 'text-indigo-600' : 'text-gray-400'}`}
           >
-            Step Execution
+            ステップ実行
           </span>
           <ToggleSwitch
             checked={mode === 'range'}
@@ -135,7 +135,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
               onClick={() => setIsListOpen(!isListOpen)}
             >
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                Available Chains
+                利用可能なチェーン
                 {!isListOpen && <Badge className="ml-2">{dataNodes.length}</Badge>}
               </span>
               <div className="flex items-center gap-4">
@@ -145,14 +145,14 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                       onClick={handleSelectAll}
                       className="text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
                     >
-                      All
+                      全選択
                     </button>
                     <div className="w-px h-4 bg-gray-300 my-auto"></div>
                     <button
                       onClick={handleSelectNone}
                       className="text-[10px] font-bold text-gray-500 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
                     >
-                      None
+                      解除
                     </button>
                   </div>
                 )}
@@ -202,7 +202,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                             {node.id}
                           </div>
                           <div className="text-[12px] text-slate-400 font-mono">
-                            Latency: {node.latency}ms
+                            レイテンシ: {node.latency}ms
                           </div>
                         </div>
                       </div>
@@ -233,7 +233,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                   <RotateCw className="w-3.5 h-3.5" />
                 </div>
                 <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
-                  Step Settings
+                  ステップ設定
                 </span>
               </div>
 
@@ -241,7 +241,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                 {(['start', 'end', 'step'] as const).map(field => (
                   <div key={field} className="relative">
                     <div className="text-[10px] font-extrabold text-indigo-300 uppercase mb-1.5 ml-1 tracking-widest">
-                      {field}
+                      {field === 'start' ? '開始' : field === 'end' ? '終了' : 'ステップ'}
                     </div>
                     <input
                       type="number"
@@ -272,20 +272,20 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-500" />
                 <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
-                  Generation Preview
+                  生成プレビュー
                 </span>
               </div>
-              <Badge color="indigo">{previewScenarios.length} Scenarios</Badge>
+              <Badge color="indigo">{previewScenarios.length} シナリオ</Badge>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-2 space-y-2">
               {previewScenarios.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-indigo-300 p-8 border-2 border-dashed border-indigo-100 rounded-xl m-2">
                   <MousePointerClick className="w-8 h-8 mb-2 opacity-50" />
-                  <span className="text-xs font-bold">Select chains to generate scenarios</span>
+                  <span className="text-xs font-bold">チェーンを選択してシナリオを生成</span>
                   {mode === 'range' && (
                     <span className="text-[10px] mt-1 text-indigo-300/80">
-                      Check step range settings
+                      ステップ範囲設定を確認してください
                     </span>
                   )}
                 </div>
@@ -301,7 +301,7 @@ export const ChainSelector: React.FC<ChainSelectorProps> = ({
                           #{idx + 1}
                         </div>
                         <span className="text-xs font-bold text-gray-600">
-                          {scenarioChains.length} Nodes
+                          {scenarioChains.length} ノード
                         </span>
                       </div>
                       <ArrowRight className="w-4 h-4 text-indigo-200 group-hover:text-indigo-400 transition-colors" />

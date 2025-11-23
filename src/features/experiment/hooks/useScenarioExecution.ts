@@ -32,7 +32,7 @@ export const useScenarioExecution = (
 
     if (msg.type === 'ALL_COMPLETE') {
       setIsExecutionRunning(false);
-      notify('success', 'All Scenarios Processed', 'Batch execution finished.');
+      notify('success', '実行開始', `シナリオ #${msg.scenarioId} の実行を開始しました。`);
       return;
     }
 
@@ -148,14 +148,14 @@ export const useScenarioExecution = (
     setIsGenerating(false);
     notify(
       'success',
-      'Scenarios Generated',
-      `${newScenarios.length} scenarios created.`
+      'シナリオ生成完了',
+      `${newScenarios.length} 件のシナリオが生成されました。`
     );
   };
 
   const executeScenarios = async (projectName: string) => {
     setIsExecutionRunning(true);
-    notify('success', 'Job Queued', 'Scenarios sent to execution queue.');
+    notify('success', 'ジョブをキューに追加しました', 'シナリオが実行キューに送信されました。');
 
     const readyScenarios = scenarios.filter(s => s.status === 'READY');
     const res = await api.experiment.run(readyScenarios);

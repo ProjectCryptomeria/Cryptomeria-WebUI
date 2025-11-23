@@ -31,7 +31,7 @@ export const useFileUploadTree = (notify: (type: 'success' | 'error', title: str
     });
     const sizeMB = parseFloat((totalSize / (1024 * 1024)).toFixed(2));
     setUploadStats({ count: fileCount, sizeMB, tree: root, treeOpen: true });
-    notify('success', 'Files Parsed', `${fileCount} files processed locally (${sizeMB}MB).`);
+    notify('success', 'ファイル解析完了', `${fileCount} 個のファイルをローカルで処理しました (${sizeMB}MB)。`);
     return sizeMB;
   };
 
@@ -86,7 +86,7 @@ export const useFileUploadTree = (notify: (type: 'success' | 'error', title: str
           }
         } catch (e) {
           console.error("Zip error:", e);
-          notify('error', 'Zip Extraction Failed', `Could not extract ${file.name}`);
+          notify('error', 'Zip解凍エラー', `${file.name} を解凍できませんでした`);
         }
       } else {
         // 通常ファイルの場合は webkitRelativePath (フォルダドロップ時) またはファイル名を使用

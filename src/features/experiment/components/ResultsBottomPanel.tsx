@@ -78,13 +78,13 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           <div className="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
             <CheckCircle className="w-5 h-5 mr-2" />
             <span className="font-bold text-lg">{successCount}</span>
-            <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">Success</span>
+            <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">成功</span>
           </div>
           <div className="h-6 w-px bg-gray-300"></div>
           <div className="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
             <AlertCircle className="w-5 h-5 mr-2" />
             <span className="font-bold text-lg">{failCount}</span>
-            <span className="text-xs text-red-700 font-bold ml-1.5 uppercase">Fail</span>
+            <span className="text-xs text-red-700 font-bold ml-1.5 uppercase">失敗</span>
           </div>
         </div>
         <div className="flex gap-3">
@@ -162,7 +162,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                   }}
                   className="text-status-fail font-bold hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center"
                 >
-                  <AlertCircle className="w-5 h-5 mr-1.5" /> ERROR
+                  <AlertCircle className="w-5 h-5 mr-1.5" /> エラー
                 </button>
                 <button
                   onClick={e => {
@@ -186,7 +186,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               <div className="flex items-center space-x-5 flex-1">
                 <div className="text-center w-10 shrink-0">
                   <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">
-                    Seq
+                    No.
                   </span>
                   <span className="font-black text-gray-700 text-lg">{c.id}</span>
                 </div>
@@ -195,7 +195,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                     {c.uniqueId}
                   </div>
                   <div className="font-bold text-gray-800 text-base">
-                    Size: {c.dataSize}MB / Chunk: {c.chunkSize}KB
+                    サイズ: {c.dataSize}MB / チャンク: {c.chunkSize}KB
                   </div>
                   <div className="text-gray-500 text-xs mt-1 font-medium flex gap-2 flex-wrap items-center">
                     <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">
@@ -208,7 +208,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
 
                     {/* 変更箇所: チェーン情報の表示強化 */}
                     <div className="flex items-center gap-1.5 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100 text-indigo-800">
-                      <span className="font-bold">{c.chains} Nodes:</span>
+                      <span className="font-bold">{c.chains} ノード:</span>
                       <span className="font-mono text-[10px] text-indigo-600 truncate max-w-[150px]">
                         [{c.targetChains.map(ch => ch.replace('datachain-', '')).join(', ')}]
                       </span>
