@@ -1,7 +1,7 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/mocks/handlers.ts
 
 import { http, HttpResponse, delay } from 'msw';
-import { MockServer } from '../src/backend_mock/MockServer';
+import { MockServer } from './MockServer';
 
 /**
  * MSW Handlers

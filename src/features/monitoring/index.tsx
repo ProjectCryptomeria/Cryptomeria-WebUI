@@ -1,7 +1,7 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/monitoring/index.tsx
 
 import React, { useState } from 'react';
-import TopologyGraph from '../../components/TopologyGraph';
+import TopologyGraph from './components/TopologyGraph';
 import { NodeStatus, MonitoringUpdate } from '../../types';
 import { Activity, Zap, ChevronLeft, Monitor, X } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';

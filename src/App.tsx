@@ -1,17 +1,17 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/App.tsx
 
 import React, { useState } from 'react';
-import { AppLayer, ExperimentResult, ExperimentConfig, ExperimentPreset } from './src/types';
-import MonitoringLayer from './src/features/monitoring';
-import DeploymentLayer from './src/features/deployment';
-import EconomyLayer from './src/features/economy';
-import ExperimentLayer from './src/features/experiment';
-import LibraryLayer from './src/features/library';
-import PresetLayer from './src/features/preset';
-import { useNotification } from './src/hooks/useNotification';
-import { useEconomyManagement } from './src/features/economy/hooks/useEconomyManagement';
-import { api } from './src/services/api';
-import { MainLayout } from './src/components/layout/MainLayout';
+import { MainLayout } from './components/layout/MainLayout';
+import DeploymentLayer from './features/deployment';
+import EconomyLayer from './features/economy';
+import { useEconomyManagement } from './features/economy/hooks/useEconomyManagement';
+import ExperimentLayer from './features/experiment';
+import LibraryLayer from './features/library';
+import MonitoringLayer from './features/monitoring';
+import PresetLayer from './features/preset';
+import { useNotification } from './hooks/useNotification';
+import { api } from './services/api';
+import { AppLayer, ExperimentConfig, ExperimentPreset, ExperimentResult } from './types';
 
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);

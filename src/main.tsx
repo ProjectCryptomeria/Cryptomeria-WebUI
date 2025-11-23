@@ -21,7 +21,7 @@ async function enableMocking() {
 
   try {
     // 同階層のmocks/browser.tsからworkerをインポート
-    const { worker } = await import('./mocks/browser');
+    const { worker } = await import('./backend_mock/browser');
 
     // MSWを起動。未処理のリクエストはそのままバイパスする設定。
     // タイムアウト処理を追加して、SWの不具合でアプリが起動しないのを防ぐ
