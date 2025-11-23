@@ -11,9 +11,9 @@ import {
   ArrowRight,
   MousePointerClick,
 } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
-import { NodeStatus } from '../../../types';
-import { ToggleSwitch } from '../../../components/ui/ToggleSwitch';
+import { Badge } from '@/shared/ui/Badge';
+import { NodeStatus } from '@/entities/node';
+import { ToggleSwitch } from '@/shared/ui/ToggleSwitch';
 
 interface ChainSelectorProps {
   nodes: NodeStatus[];

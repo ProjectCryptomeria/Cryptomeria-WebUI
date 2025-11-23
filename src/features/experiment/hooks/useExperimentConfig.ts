@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react';
-import {
-	AllocatorStrategy,
-	TransmitterStrategy,
-	ExperimentPreset,
-	NodeStatus,
-	MonitoringUpdate,
-} from '../../../types';
+import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
+import { ExperimentPreset } from '@/entities/preset';
+import { NodeStatus, MonitoringUpdate } from '@/entities/node';
 import { useFileUploadTree } from './useFileUploadTree';
 import { mapStateToPresetConfig, mapPresetToState, ExperimentFormState } from '../utils/mappers';
-import { useWebSocket } from '../../../hooks/useWebSocket';
-import { useGlobalStore } from '../../../stores/useGlobalStore';
+import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
+import { useGlobalStore } from '@/shared/store/useGlobalStore';
 
 /**
  * 実験設定フォームの状態とロジックを管理するHook

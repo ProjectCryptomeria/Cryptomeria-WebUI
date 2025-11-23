@@ -1,8 +1,9 @@
 import React from 'react';
-import { ExperimentPreset, AllocatorStrategy, TransmitterStrategy } from '../../../types';
+import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
+import { ExperimentPreset } from '@/entities/preset';
 import { FileText, Clock, Trash2, Database, Puzzle, Monitor, RotateCcw } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
-import { Card } from '../../../components/ui/Card';
+import { Badge } from '@/shared/ui/Badge';
+import { Card } from '@/shared/ui/Card';
 
 interface PresetCardProps {
   preset: ExperimentPreset;

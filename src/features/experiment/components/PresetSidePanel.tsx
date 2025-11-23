@@ -1,5 +1,6 @@
-import React from 'react';
-import { ExperimentPreset, AllocatorStrategy, TransmitterStrategy } from '../../../types';
+import React, { useState } from 'react';
+import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
+import { ExperimentPreset } from '@/entities/preset';
 import {
   Bookmark,
   X,
@@ -11,7 +12,7 @@ import {
   RotateCcw,
   Trash2,
 } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
+import { Badge } from '@/shared/ui/Badge';
 
 interface PresetSidePanelProps {
   isOpen: boolean;

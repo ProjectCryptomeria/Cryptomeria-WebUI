@@ -1,6 +1,6 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
-import { ToggleSwitch } from '../../../components/ui/ToggleSwitch';
+import { ToggleSwitch } from '@/shared/ui/ToggleSwitch';
 
 interface RangeInputProps {
   label: string;

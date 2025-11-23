@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { ExperimentPreset } from '../../../types';
+import { ExperimentPreset } from '@/entities/preset';
 import {
   FileText,
   Settings2,
@@ -12,8 +12,8 @@ import {
   ChevronDown,
   Monitor,
 } from 'lucide-react';
-import { SlideOver } from '../../../components/ui/SlideOver';
-import { Badge } from '../../../components/ui/Badge';
+import { SlideOver } from '@/shared/ui/SlideOver';
+import { Badge } from '@/shared/ui/Badge';
 
 interface PresetDetailsPanelProps {
   preset: ExperimentPreset | null;

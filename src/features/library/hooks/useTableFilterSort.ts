@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ExperimentResult, FilterCondition, SortConfig } from '../../../types';
+import { ExperimentResult } from '@/entities/result';
+import type { FilterCondition, SortConfig } from '@/shared/types';
 
 /**
  * 実験結果のフィルタリングとソートのためのHook

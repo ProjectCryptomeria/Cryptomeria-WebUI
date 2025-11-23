@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { MempoolInfo } from '../../../types';
+import { MempoolInfo } from '@/entities/node';
 
 interface MempoolChartProps {
   data: MempoolInfo[];

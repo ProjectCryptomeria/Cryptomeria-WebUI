@@ -1,9 +1,9 @@
+import { ExperimentPreset } from '@/entities/preset/model/types';
 import {
 	ExperimentConfig,
-	ExperimentPreset,
 	AllocatorStrategy,
 	TransmitterStrategy,
-} from '../../../types';
+} from '@/entities/scenario';
 
 // UIで使用するパラメータの型定義
 export interface ExperimentFormState {

@@ -10,7 +10,7 @@ import {
   ChevronsDown,
   ChevronsUp,
 } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
+import { Badge } from '@/shared/ui/Badge';
 
 // 一括操作のシグナル管理用
 type GlobalToggle = {

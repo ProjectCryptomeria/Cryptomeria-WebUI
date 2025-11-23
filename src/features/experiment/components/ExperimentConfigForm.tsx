@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { AllocatorStrategy, TransmitterStrategy, UserAccount, NodeStatus } from '../../../types';
+import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
+import { UserAccount } from '@/entities/account';
+import { NodeStatus } from '@/entities/node';
 import { Settings2, Box, Upload, Zap, Info, ChevronDown, Loader2 } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '@/shared/ui/Card';
 import { RangeInput } from './RangeInput';
 import { StrategyCard } from './StrategyCard';
 import { ChainSelector } from './ChainSelector';

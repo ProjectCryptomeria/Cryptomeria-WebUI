@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { NodeStatus } from '../../../types';
+import { NodeStatus, PacketEvent } from '@/entities/node';
 import { Server, Database, Cpu } from 'lucide-react';
-import { useWebSocket } from '../../../hooks/useWebSocket';
-import { PacketEvent } from '../../../types';
+import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
 
 interface TopologyGraphProps {
   nodes: NodeStatus[];

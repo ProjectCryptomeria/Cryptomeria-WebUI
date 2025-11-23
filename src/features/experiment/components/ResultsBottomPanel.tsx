@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExperimentScenario } from '../../../types';
+import { ExperimentScenario } from '@/entities/scenario';
 import {
   List,
   CheckCircle,
@@ -13,7 +13,7 @@ import {
   Coins,
   Trash2,
 } from 'lucide-react';
-import { BottomPanel } from '../../../components/ui/BottomPanel';
+import { BottomPanel } from '@/shared/ui/BottomPanel';
 
 interface ResultsBottomPanelProps {
   isOpen: boolean;
