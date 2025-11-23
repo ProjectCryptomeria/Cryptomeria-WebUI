@@ -38,13 +38,20 @@ const App: React.FC = () => {
     addToast,
     clearNotifications,
   } = useNotification();
-  const { users, systemAccounts, handleCreateUser, handleDeleteUser, handleFaucet } =
-    useEconomyManagement(deployedNodeCount, addToast);
+
+  // refresh を分割代入で取得
+  const {
+    users,
+    systemAccounts,
+    handleCreateUser,
+    handleDeleteUser,
+    handleFaucet,
+    refresh: refreshEconomy,
+  } = useEconomyManagement(deployedNodeCount, addToast);
 
   const [results, setResults] = useState<ExperimentResult[]>([]);
   const [presets, setPresets] = useState<ExperimentPreset[]>([]);
 
-  // ログ表示用の状態をここに定義（Global State化）
   const [logScenarioId, setLogScenarioId] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -106,14 +113,13 @@ const App: React.FC = () => {
   const handleRegisterResult = (result: ExperimentResult) => setResults(prev => [result, ...prev]);
 
   // アプリ全体で実行状態を保持
-  const execution = useScenarioExecution(addToast, handleRegisterResult);
+  // 第3引数に refreshEconomy を渡して、実験完了時の残高更新を行う
+  const execution = useScenarioExecution(addToast, handleRegisterResult, refreshEconomy);
 
-  // ログ表示用のハンドラ
   const handleLogClick = (scenario: ExperimentScenario) => {
     setLogScenarioId(scenario.uniqueId);
   };
 
-  // 表示対象のシナリオを特定
   const scenarioToView = useMemo(() => {
     if (!logScenarioId) return null;
     return execution.scenarios.find(s => s.uniqueId === logScenarioId) || null;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExperimentScenario } from '../../../types';
+import { ExperimentScenario, UserAccount } from '../../../types';
 import {
   List,
   CheckCircle,
@@ -9,7 +9,8 @@ import {
   PlayCircle,
   Settings2,
   CheckCircle2,
-  Clock, // 実行待機中アイコンとしてClockを追加
+  Clock,
+  Coins,
 } from 'lucide-react';
 import { BottomPanel } from '../../../components/ui/BottomPanel';
 
@@ -25,14 +26,17 @@ interface ResultsBottomPanelProps {
   successCount: number;
   failCount: number;
   isExecutionRunning: boolean;
-  // [修正] 新しいカウント値を追加
   pendingCount: number;
 
+  // 一括再試算には最新のユーザー情報(残高)が必要なため引数を変更しても良いが、
+  // ここでは親から関数を受け取る形にする
   onRecalculateAll: () => void;
   onExecute: () => void;
   onErrorClick: (id: string, reason: string) => void;
-  onReprocess: (id: number) => void;
   onLogClick: (scenario: ExperimentScenario) => void;
+
+  // 廃止: onReprocess (個別再実行)
+  onReprocess?: (id: number) => void;
 }
 
 export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
@@ -46,13 +50,19 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
   successCount,
   failCount,
   isExecutionRunning,
-  pendingCount, // [修正] Propsに追加
+  pendingCount,
   onRecalculateAll,
   onExecute,
   onErrorClick,
-  onReprocess,
   onLogClick,
 }) => {
+  // 試算中かどうか判定
+  const isCalculating = scenarios.some(s => s.status === 'CALCULATING');
+  // 実行可能なシナリオがあるか
+  const hasReadyScenarios = scenarios.some(s => s.status === 'READY');
+  // 失敗があるか
+  const hasFailed = failCount > 0;
+
   return (
     <BottomPanel
       isOpen={isOpen}
@@ -70,21 +80,23 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
       }
       icon={List}
       headerRight={
-        <div className="text-base text-gray-600 font-medium hidden sm:block">
-          総コスト試算:{' '}
-          <span className="font-mono font-bold text-gray-900 text-lg">{totalCost}</span> TKN
+        <div className="text-base text-gray-600 font-medium hidden sm:flex items-center gap-2">
+          <span>総コスト試算:</span>
+          <span className="font-mono font-bold text-gray-900 text-lg">{totalCost}</span>
+          <span className="text-xs text-gray-400">TKN</span>
         </div>
       }
     >
       {/* Status Bar & Execute */}
       <div className="px-8 py-3 bg-indigo-50/50 border-b border-indigo-50 flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center space-x-8 text-sm">
-          {/* [修正] 1. 実行待機中数 (Pending + Calculating + Ready) */}
+        <div className="flex items-center space-x-6 text-sm">
+          {/* 1. 実行待機中数 */}
           <div className="flex items-center text-status-ready bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
             <Clock className="w-5 h-5 mr-2" />
             <span className="font-bold text-lg">{pendingCount}</span>
             <span className="text-xs text-status-ready font-bold ml-1.5 uppercase">待機中</span>
           </div>
+
           <div className="h-6 w-px bg-gray-300"></div>
 
           {/* 2. 成功数 */}
@@ -93,6 +105,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
             <span className="font-bold text-lg">{successCount}</span>
             <span className="text-xs text-green-700 font-bold ml-1.5 uppercase">完了</span>
           </div>
+
           <div className="h-6 w-px bg-gray-300"></div>
 
           {/* 3. 失敗数 */}
@@ -102,32 +115,49 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
             <span className="text-xs text-red-700 font-bold ml-1.5 uppercase">失敗</span>
           </div>
         </div>
+
         <div className="flex gap-3">
-          {/* Bulk Recalculate Button */}
-          {failCount > 0 && (
+          {/* 一括再試算ボタン: 失敗がある、かつ実行中でない場合に表示 */}
+          {hasFailed && !isExecutionRunning && (
             <button
               onClick={onRecalculateAll}
-              disabled={isExecutionRunning}
               className="bg-white border border-status-fail text-status-fail px-4 py-2.5 rounded-xl font-bold shadow-sm flex items-center hover:bg-red-50 transition-all"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
               一括再試算
             </button>
           )}
+
+          {/* 実行ボタン */}
           <button
             onClick={onExecute}
-            // [修正] disabled判定を修正: isExecutionRunning中か、実行待機中(READY以上)のシナリオが0件の場合に無効化
-            // 実行ボタンは、READY以上のシナリオが1件以上あれば押せるべき
-            disabled={isExecutionRunning || pendingCount === 0}
-            className="bg-gray-300 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm flex items-center disabled:opacity-50 data-[ready=true]:bg-primary-indigo data-[ready=true]:hover:bg-indigo-700 data-[ready=true]:hover:shadow-md transition-all transform active:scale-95"
-            data-ready={pendingCount > 0 && !isExecutionRunning} // 実行可能なシナリオがある場合にスタイルを適用
+            // 試算中 または 実行中 または 実行可能シナリオがない場合は押せない
+            disabled={isCalculating || isExecutionRunning || !hasReadyScenarios}
+            className={`
+              px-6 py-2.5 rounded-xl font-bold shadow-sm flex items-center transition-all transform active:scale-95
+              ${
+                isCalculating || isExecutionRunning || !hasReadyScenarios
+                  ? 'bg-gray-300 text-white opacity-70 cursor-not-allowed'
+                  : 'bg-primary-indigo text-white hover:bg-indigo-700 hover:shadow-md'
+              }
+            `}
           >
             {isExecutionRunning ? (
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                実行中...
+              </>
+            ) : isCalculating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                試算中...
+              </>
             ) : (
-              <PlayCircle className="w-5 h-5 mr-2" />
+              <>
+                <PlayCircle className="w-5 h-5 mr-2" />
+                一括実行
+              </>
             )}
-            実行
           </button>
         </div>
       </div>
@@ -138,29 +168,44 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
           let border = 'border-l-4 border-gray-200';
           let statusContent = null;
           let bgClass = 'bg-white';
+          let opacity = 'opacity-100';
 
-          if (c.status === 'PENDING' || c.status === 'CALCULATING') {
-            border = 'border-l-4 border-status-process';
+          if (c.status === 'PENDING') {
+            // 試算待機: グレー
+            border = 'border-l-4 border-slate-300';
+            bgClass = 'bg-slate-50';
+            statusContent = (
+              <div className="text-slate-400 font-bold flex items-center text-xs uppercase tracking-wider">
+                <Clock className="w-4 h-4 mr-1.5" /> 試算待機
+              </div>
+            );
+          } else if (c.status === 'CALCULATING') {
+            // 試算中: 黄色
+            border = 'border-l-4 border-status-process'; // Yellow
             statusContent = (
               <div className="text-status-process font-bold flex items-center">
-                <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> 試算中
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> 試算中...
+              </div>
+            );
+          } else if (c.status === 'READY') {
+            // 実行待機 (試算完了): 青
+            border = 'border-l-4 border-status-ready';
+            statusContent = (
+              <div className="text-status-ready font-bold flex items-center bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                <Coins className="w-4 h-4 mr-1.5" /> 試算: {c.cost.toFixed(2)}
               </div>
             );
           } else if (c.status === 'RUNNING') {
+            // 実行中
             border = 'border-l-4 border-status-process';
+            bgClass = 'bg-yellow-50/30';
             statusContent = (
               <div className="text-status-process font-bold flex items-center">
                 <Settings2 className="w-4 h-4 animate-spin mr-1.5" /> 実行中
               </div>
             );
-          } else if (c.status === 'READY') {
-            border = 'border-l-4 border-status-ready';
-            statusContent = (
-              <div className="text-status-ready font-bold flex items-center">
-                <CheckCircle2 className="w-5 h-5 mr-1.5" /> {c.cost.toFixed(2)} TKN
-              </div>
-            );
           } else if (c.status === 'COMPLETE') {
+            // 完了
             border = 'border-l-4 border-status-success';
             statusContent = (
               <div className="text-status-success font-bold flex items-center">
@@ -168,8 +213,9 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
               </div>
             );
           } else if (c.status === 'FAIL') {
+            // 失敗
             border = 'border-l-4 border-status-fail';
-            bgClass = 'bg-red-50/30';
+            bgClass = 'bg-red-50/50';
             statusContent = (
               <div className="flex items-center">
                 <button
@@ -177,18 +223,9 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                     e.stopPropagation();
                     onErrorClick(c.uniqueId, c.failReason || '');
                   }}
-                  className="text-status-fail font-bold hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center"
+                  className="text-status-fail font-bold hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center text-sm"
                 >
-                  <AlertCircle className="w-5 h-5 mr-1.5" /> エラー
-                </button>
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    onReprocess(c.id);
-                  }}
-                  className="ml-2 bg-white text-status-fail border border-status-fail hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center"
-                >
-                  <RotateCcw className="w-4 h-4 mr-1.5" /> 再試算
+                  <AlertCircle className="w-4 h-4 mr-1.5" /> エラー詳細
                 </button>
               </div>
             );
@@ -198,7 +235,7 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
             <div
               key={c.uniqueId}
               onClick={() => onLogClick(c)}
-              className={`p-4 rounded-2xl shadow-sm ${border} ${bgClass} flex justify-between items-center animate-fade-in hover:shadow-md transition-all cursor-pointer mb-1`}
+              className={`p-4 rounded-2xl shadow-sm ${border} ${bgClass} ${opacity} flex justify-between items-center hover:shadow-md transition-all cursor-pointer mb-1`}
             >
               <div className="flex items-center space-x-5 flex-1">
                 <div className="text-center w-10 shrink-0">
@@ -208,9 +245,16 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                   <span className="font-black text-gray-700 text-lg">{c.id}</span>
                 </div>
                 <div className="text-sm overflow-hidden">
-                  <div className="font-mono text-xs font-bold text-gray-400 truncate mb-1 opacity-70">
-                    {c.uniqueId}
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="font-mono text-xs font-bold text-gray-400 truncate opacity-70">
+                      {c.uniqueId}
+                    </div>
+                    {/* ユーザーIDバッジ */}
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-[100px]">
+                      user: {c.userId}
+                    </span>
                   </div>
+
                   <div className="font-bold text-gray-800 text-base">
                     サイズ: {c.dataSize}MB / チャンク: {c.chunkSize}KB
                   </div>
@@ -222,18 +266,13 @@ export const ResultsBottomPanel: React.FC<ResultsBottomPanelProps> = ({
                       {c.transmitter}
                     </span>
                     <span className="text-gray-400">|</span>
-
-                    {/* 変更箇所: チェーン情報の表示強化 */}
                     <div className="flex items-center gap-1.5 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100 text-indigo-800">
-                      <span className="font-bold">{c.chains} ノード:</span>
-                      <span className="font-mono text-[10px] text-indigo-600 truncate max-w-[150px]">
-                        [{c.targetChains.map(ch => ch.replace('datachain-', '')).join(', ')}]
-                      </span>
+                      <span className="font-bold">{c.chains} ノード</span>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="text-right shrink-0 flex items-center">{statusContent}</div>
+              <div className="text-right shrink-0 flex items-center pl-4">{statusContent}</div>
             </div>
           );
         })}

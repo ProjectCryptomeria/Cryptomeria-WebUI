@@ -26,14 +26,12 @@ export const useEconomyManagement = (
   const handleCreateUser = async () => {
     await api.economy.createUser();
     refresh();
-    // 修正: 日本語化
     addToast('success', 'アカウント作成完了', '新規ユーザーアカウントを作成しました。');
   };
 
   const handleDeleteUser = async (id: string) => {
     await api.economy.deleteUser(id);
     refresh();
-    // 修正: 日本語化
     addToast('success', '削除完了', 'ユーザーアカウントを削除しました。');
   };
 
@@ -41,13 +39,12 @@ export const useEconomyManagement = (
     try {
       const res = await api.economy.faucet(targetId, 1000);
       refresh();
-      // 修正: 日本語化
       addToast('success', 'TKN 送金成功 (Faucet)', `${res.targetName} へ 1000 TKN を送金しました。`);
     } catch (e) {
-      // 修正: 日本語化
       addToast('error', 'Faucet 失敗', '資金供給に失敗しました (プール残高不足の可能性)');
     }
   };
 
-  return { users, systemAccounts, handleCreateUser, handleDeleteUser, handleFaucet };
+  // refresh を返却オブジェクトに追加
+  return { users, systemAccounts, handleCreateUser, handleDeleteUser, handleFaucet, refresh };
 };

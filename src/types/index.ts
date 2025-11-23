@@ -106,11 +106,19 @@ export interface ExperimentConfig {
   shouldFail?: boolean;
 }
 
-export type ScenarioStatus = 'PENDING' | 'CALCULATING' | 'READY' | 'RUNNING' | 'COMPLETE' | 'FAIL';
+// ステータス定義: 試算待機(PENDING), 試算中(CALCULATING) を明確化
+export type ScenarioStatus =
+  | 'PENDING' // 試算待機 (灰色)
+  | 'CALCULATING' // 試算中 (黄色)
+  | 'READY' // 実行待機 (青/緑) - 試算完了
+  | 'RUNNING' // 実行中 (黄色アニメーション)
+  | 'COMPLETE' // 完了 (緑)
+  | 'FAIL'; // 失敗 (赤)
 
 export interface ExperimentScenario {
   id: number;
   uniqueId: string;
+  userId: string; // 実行アカウントIDを追加
   dataSize: number;
   chunkSize: number;
   allocator: AllocatorStrategy;
@@ -118,11 +126,20 @@ export interface ExperimentScenario {
   chains: number;
   targetChains: string[];
   budgetLimit: number;
-  cost: number;
+  cost: number; // 試算コスト
   status: ScenarioStatus;
   failReason: string | null;
   progress: number;
   logs: string[];
+}
+
+// 追加: 実行結果通知用の詳細データ型
+export interface ExecutionResultDetails {
+  userId: string;
+  userName?: string;
+  actualCost: number;
+  refund: number;
+  currentBalance: number;
 }
 
 export interface ExperimentPreset {
@@ -134,7 +151,6 @@ export interface ExperimentPreset {
     accountValue: string;
     dataSize: { mode: 'fixed' | 'range'; fixed: number; start: number; end: number; step: number };
     chunkSize: { mode: 'fixed' | 'range'; fixed: number; start: number; end: number; step: number };
-    // ここを追加
     chainSelection?: {
       mode: 'fixed' | 'range';
       range: { start: number; end: number; step: number };

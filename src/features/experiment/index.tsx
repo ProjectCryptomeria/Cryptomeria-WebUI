@@ -142,10 +142,12 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
             failCount={failCount}
             pendingCount={pendingCount}
             isExecutionRunning={execution.isExecutionRunning}
-            onRecalculateAll={execution.handleRecalculateAll}
+            // 修正: 引数なし関数 () => void に合わせるため、usersを渡すラッパー関数にする
+            onRecalculateAll={() => execution.handleRecalculateAll(users)}
             onExecute={() => execution.executeScenarios(config.projectName)}
             onErrorClick={(id, reason) => setErrorModal({ isOpen: true, id, reason })}
-            onReprocess={execution.reprocessCondition}
+            // onReprocess は廃止されたため削除、または使用する場合は定義を確認
+            // onReprocess={execution.reprocessCondition}
             onLogClick={onLogClick}
           />
 

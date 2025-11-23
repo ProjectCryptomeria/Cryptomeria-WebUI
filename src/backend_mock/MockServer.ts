@@ -10,6 +10,7 @@ import {
   PacketEvent,
   MempoolInfo,
   ExperimentPreset,
+  ExecutionResultDetails, // 追加
 } from '../types';
 import {
   generateMockNodes,
@@ -271,40 +272,87 @@ class MockServerInstance {
     return { executionId };
   }
 
+  /**
+   * 実験シミュレーション（バッチ実行）
+   * 順番に実行し、資金の引き落としと返金を行う
+   */
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
     for (const scenario of scenarios) {
+      // 準備完了以外のステータスはスキップ
       if (scenario.status !== 'READY') continue;
 
+      const user = this.users.find(u => u.id === scenario.userId);
+
+      // 1. 実行開始前: 資金引き落とし (Estimate Cost分)
+      if (user) {
+        user.balance -= scenario.cost;
+      }
+
+      // ステータス: RUNNINGへ遷移
       this.broadcast('/ws/experiment/progress', {
         executionId,
         scenarioId: scenario.id,
         status: 'RUNNING',
-        log: '[INFO] Initializing transaction batch...',
+        log: `[SYSTEM] Execution started. Deducted ${scenario.cost} TKN from account.`,
       });
+
+      // シミュレーション遅延 (実行中)
       await new Promise(r => setTimeout(r, 800));
 
       this.broadcast('/ws/experiment/progress', {
         executionId,
         scenarioId: scenario.id,
-        log: '[INFO] Broadcast Tx: 0x3a...f1',
+        log: `[INFO] Uploading ${scenario.dataSize}MB data...`,
       });
       await new Promise(r => setTimeout(r, 800));
 
+      // 成功/失敗のランダム判定
       const success = Math.random() > 0.15;
       const status = success ? 'COMPLETE' : 'FAIL';
-      const log = success ? '[SUCCESS] Data commited to block.' : '[ERROR] Consensus timeout.';
+      let log = '';
 
+      // 2. 実行完了後: 実コスト計算と返金 (Refund)
+      // 実際にかかったコストをランダムに計算 (試算の 80% ~ 110%)
+      // 失敗時はガスコストのみ消費したとして、試算の10%程度とする
+      const actualCost = success
+        ? parseFloat((scenario.cost * (0.8 + Math.random() * 0.3)).toFixed(2))
+        : parseFloat((scenario.cost * 0.1).toFixed(2));
+
+      const refund = parseFloat((scenario.cost - actualCost).toFixed(2));
+
+      if (user) {
+        user.balance += refund;
+      }
+
+      if (success) {
+        log = `[SUCCESS] Data commited. Actual Cost: ${actualCost} TKN (Refunded: ${refund} TKN)`;
+      } else {
+        log = `[ERROR] Execution Failed. Gas Used: ${actualCost} TKN (Refunded: ${refund} TKN)`;
+      }
+
+      // 通知用の詳細データを作成
+      const resultDetails: ExecutionResultDetails = {
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
+        actualCost,
+        refund,
+        currentBalance: user?.balance || 0,
+      };
+
+      // 完了イベント送信 (詳細データを含める)
       this.broadcast('/ws/experiment/progress', {
         executionId,
         scenarioId: scenario.id,
         status,
         log,
+        resultDetails, // ← ここで追加
       });
 
+      // 結果の保存 (成功時のみ)
       if (success) {
         this.results.unshift({
           id: `res-${scenario.uniqueId}`,
-          scenarioName: `Auto Execution #${scenario.id}`,
+          scenarioName: `Batch Execution #${scenario.id}`,
           executedAt: new Date().toISOString(),
           status: 'SUCCESS',
           dataSizeMB: scenario.dataSize,
@@ -314,9 +362,9 @@ class MockServerInstance {
           transmitter: scenario.transmitter,
           targetChainCount: scenario.chains,
           usedChains: scenario.targetChains,
-          uploadTimeMs: 1234,
-          downloadTimeMs: 567,
-          throughputBps: 1000000,
+          uploadTimeMs: 1234 + Math.random() * 5000,
+          downloadTimeMs: 567 + Math.random() * 2000,
+          throughputBps: Math.floor(10000000 + Math.random() * 5000000),
           logs: scenario.logs,
         });
       }

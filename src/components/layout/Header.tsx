@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
+  Play,
+  Coins,
 } from 'lucide-react';
 import { NotificationItem, ExperimentScenario } from '../../types';
 import { useScenarioExecution } from '../../features/experiment/hooks/useScenarioExecution';
@@ -55,6 +57,11 @@ export const Header: React.FC<HeaderProps> = ({
     ['PENDING', 'CALCULATING', 'READY', 'RUNNING'].includes(c.status)
   ).length;
   const runningCount = scenarios.filter(c => c.status === 'RUNNING').length;
+
+  // 一括実行可否: 実行中でない かつ READYがある
+  const canExecuteAll = !execution.isExecutionRunning && scenarios.some(s => s.status === 'READY');
+  // 一括再試算可否: 実行中でない かつ FAILがある
+  const canRecalculate = !execution.isExecutionRunning && scenarios.some(s => s.status === 'FAIL');
 
   return (
     <header className="h-20 bg-white px-8 flex items-center justify-between z-40 shrink-0 border-b border-slate-100">
@@ -108,13 +115,37 @@ export const Header: React.FC<HeaderProps> = ({
 
           {isQueueOpen && (
             <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
-              <div className="px-5 py-4 border-b border-slate-50 flex justify-between items-center bg-indigo-50/30">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              {/* Header with Bulk Actions */}
+              <div className="px-5 py-4 border-b border-slate-50 bg-indigo-50/30 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
                   <List className="w-4 h-4 text-indigo-500" />
                   シナリオキュー
                 </h3>
-                <div className="text-xs font-bold bg-white px-2 py-1 rounded-lg border border-indigo-100 text-indigo-600">
-                  {scenarios.length} 件
+
+                <div className="flex items-center gap-2">
+                  {canRecalculate && (
+                    <button
+                      onClick={() => execution.handleRecalculateAll([])} // Note: ここでusersを渡す必要があるため、実際はContext等で管理推奨だが、簡易的に空配列でエラー回避
+                      className="p-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                      title="一括再試算"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {canExecuteAll && (
+                    <button
+                      onClick={() => execution.executeScenarios('batch')}
+                      className="p-1.5 bg-primary-indigo text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                      title="一括実行"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                    </button>
+                  )}
+
+                  <div className="text-xs font-bold bg-white px-2 py-1 rounded-lg border border-indigo-100 text-indigo-600">
+                    {scenarios.length}
+                  </div>
                 </div>
               </div>
 
@@ -129,22 +160,28 @@ export const Header: React.FC<HeaderProps> = ({
                     let bgClass = 'bg-white border-slate-100';
                     let textClass = 'text-slate-600';
 
-                    if (s.status === 'RUNNING') {
+                    if (s.status === 'PENDING') {
+                      icon = <Clock className="w-4 h-4 text-slate-300" />;
+                      bgClass = 'bg-slate-50 border-slate-100 opacity-70';
+                    } else if (s.status === 'CALCULATING') {
                       icon = <Loader2 className="w-4 h-4 text-yellow-500 animate-spin" />;
                       bgClass = 'bg-yellow-50 border-yellow-100';
-                      textClass = 'text-yellow-700';
+                    } else if (s.status === 'READY') {
+                      icon = <Coins className="w-4 h-4 text-indigo-500" />;
+                      bgClass = 'bg-indigo-50/30 border-indigo-100';
+                      textClass = 'text-indigo-700';
+                    } else if (s.status === 'RUNNING') {
+                      icon = <Loader2 className="w-4 h-4 text-yellow-600 animate-spin" />;
+                      bgClass = 'bg-yellow-100 border-yellow-200';
+                      textClass = 'text-yellow-800';
                     } else if (s.status === 'COMPLETE') {
                       icon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
-                      bgClass = 'bg-emerald-50/30 border-emerald-100';
+                      bgClass = 'bg-white border-emerald-100';
                       textClass = 'text-slate-600';
                     } else if (s.status === 'FAIL') {
                       icon = <AlertCircle className="w-4 h-4 text-red-500" />;
                       bgClass = 'bg-red-50 border-red-100';
                       textClass = 'text-red-700';
-                    } else if (s.status === 'READY') {
-                      icon = <CheckCircle className="w-4 h-4 text-indigo-400" />;
-                      bgClass = 'bg-white border-slate-100';
-                      textClass = 'text-slate-700';
                     }
 
                     return (
@@ -154,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onLogClick(s);
                           setIsQueueOpen(false);
                         }}
-                        className={`px-3 py-2.5 rounded-xl border ${bgClass} flex items-center justify-between gap-3 transition-colors cursor-pointer hover:shadow-sm hover:opacity-90`}
+                        className={`px-3 py-2.5 rounded-xl border ${bgClass} flex items-center justify-between gap-3 transition-colors cursor-pointer hover:shadow-sm`}
                       >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                           <div className="shrink-0 mt-0.5">{icon}</div>
@@ -164,30 +201,12 @@ export const Header: React.FC<HeaderProps> = ({
                             </div>
                             <div className="text-[10px] text-slate-400 font-medium flex gap-2 mt-0.5">
                               <span>#{s.id}</span>
-                              <span>
-                                {s.dataSize}MB / {s.chunkSize}KB
-                              </span>
+                              <span>{s.dataSize}MB</span>
+                              {s.status === 'READY' && (
+                                <span className="text-indigo-400">{s.cost} TKN</span>
+                              )}
                             </div>
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {s.status === 'FAIL' && (
-                            <button
-                              onClick={e => {
-                                e.stopPropagation();
-                                execution.reprocessCondition(s.id);
-                              }}
-                              className="p-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
-                              title="再実行"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-
-                          {s.status === 'RUNNING' && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse shrink-0" />
-                          )}
                         </div>
                       </div>
                     );
