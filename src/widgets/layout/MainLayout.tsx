@@ -3,7 +3,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { ExperimentScenario } from '@/entities/scenario';
 import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 import { AppLayer } from '@/shared/types';
 
 interface MainLayoutProps {

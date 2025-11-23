@@ -23,7 +23,7 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { TableStyles } from '@/shared/ui/Table';
 import { useTableFilterSort } from '@/features/library/hooks/useTableFilterSort';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * Library Layer

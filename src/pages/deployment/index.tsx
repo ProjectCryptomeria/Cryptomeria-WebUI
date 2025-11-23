@@ -7,7 +7,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { Button } from '@/shared/ui/Button';
 import { useDeploymentControl } from '@/features/deployment/hooks/useDeploymentControl';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * Deployment Layer

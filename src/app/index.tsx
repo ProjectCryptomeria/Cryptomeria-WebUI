@@ -19,7 +19,7 @@ import type {
 import type { MonitoringUpdate } from '../entities/node';
 import type { ExperimentResult } from '../entities/result'; // 必要な型をインポート
 import { useWebSocket } from '../shared/lib/hooks/useWebSocket';
-import { useGlobalStore } from '../shared/store/useGlobalStore';
+import { useGlobalStore } from '../shared/store';
 
 // 進捗通知の型を定義
 interface ProgressMessage {

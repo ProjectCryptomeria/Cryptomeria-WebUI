@@ -4,7 +4,7 @@ import { AlertCircle, ArrowLeft, TestTube } from 'lucide-react';
 import { Modal } from '@/shared/ui/Modal';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useResizerPanel } from '@/shared/lib/hooks/useResizerPanel';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 // Components
 import { PresetSidePanel } from '@/features/experiment/components/PresetSidePanel';

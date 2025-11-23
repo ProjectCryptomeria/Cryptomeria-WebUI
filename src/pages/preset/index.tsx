@@ -7,7 +7,7 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import { Button } from '@/shared/ui/Button';
 import { PresetCard } from '@/features/preset/components/PresetCard';
 import { PresetDetailsPanel } from '@/features/preset/components/PresetDetailsPanel';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * Preset Layer

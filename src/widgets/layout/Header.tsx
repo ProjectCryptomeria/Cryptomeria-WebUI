@@ -15,7 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ExperimentScenario } from '../../entities/scenario';
-import { useGlobalStore } from '../../shared/store/useGlobalStore';
+import { useGlobalStore } from '../../shared/store';
 
 interface HeaderProps {
   onLogClick: (scenario: ExperimentScenario) => void;

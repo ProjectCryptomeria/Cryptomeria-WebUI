@@ -10,7 +10,7 @@ import { BottomPanel } from '@/shared/ui/BottomPanel';
 import { MempoolChart } from '@/features/monitoring/components/MempoolChart';
 import { useResizerPanel } from '@/shared/lib/hooks/useResizerPanel';
 import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 const MonitoringLayer: React.FC = () => {
   const { setDeployedNodeCount } = useGlobalStore();

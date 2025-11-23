@@ -4,7 +4,7 @@ import React from 'react';
 import { AppLayer } from '../../shared/types';
 import { NAV_ITEMS } from '../../shared/config/constants';
 import { ChevronRight, Info, Loader2, TrendingUp, TrendingDown, Zap } from 'lucide-react';
-import { useGlobalStore } from '../../shared/store/useGlobalStore';
+import { useGlobalStore } from '../../shared/store';
 
 interface SidebarProps {
   activeLayer: AppLayer;

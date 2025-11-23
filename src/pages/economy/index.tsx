@@ -20,7 +20,7 @@ import { Button } from '@/shared/ui/Button';
 import { TableStyles } from '@/shared/ui/Table';
 import { Badge } from '@/shared/ui/Badge';
 import { Modal, ModalHeader } from '@/shared/ui/Modal';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * Economy Layer

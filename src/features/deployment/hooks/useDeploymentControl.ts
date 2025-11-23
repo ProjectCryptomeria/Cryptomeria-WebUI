@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/shared/api';
 import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * デプロイメント制御のためのHook

@@ -5,7 +5,7 @@ import { NodeStatus, MonitoringUpdate } from '@/entities/node';
 import { useFileUploadTree } from './useFileUploadTree';
 import { mapStateToPresetConfig, mapPresetToState, ExperimentFormState } from '../utils/mappers';
 import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
-import { useGlobalStore } from '@/shared/store/useGlobalStore';
+import { useGlobalStore } from '@/shared/store';
 
 /**
  * 実験設定フォームの状態とロジックを管理するHook
