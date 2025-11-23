@@ -1,18 +1,10 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/index.tsx
-
 import React, { useState } from 'react';
-import {
-  ExperimentConfig,
-  UserAccount,
-  ExperimentPreset,
-  ExperimentResult,
-  ExperimentScenario,
-} from '../../types';
+import { ExperimentScenario } from '../../types';
 import { AlertCircle, ArrowLeft, TestTube } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useResizerPanel } from '../../hooks/useResizerPanel';
-import { useScenarioExecution } from './hooks/useScenarioExecution';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 // Components
 import { PresetSidePanel } from './components/PresetSidePanel';
@@ -21,28 +13,21 @@ import { ExperimentConfigForm } from './components/ExperimentConfigForm';
 import { useExperimentConfig } from './hooks/useExperimentConfig';
 
 interface ExperimentLayerProps {
-  users: UserAccount[];
-  presets: ExperimentPreset[];
-  deployedNodeCount: number;
-  onRegisterResult: (result: ExperimentResult) => void;
-  onSavePreset: (name: string, config: ExperimentConfig, generatorState?: any) => void;
-  onDeletePreset?: (id: string) => void;
-  notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void;
-  execution: ReturnType<typeof useScenarioExecution>;
   onLogClick: (scenario: ExperimentScenario) => void;
 }
 
-const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
-  users,
-  presets,
-  deployedNodeCount,
-  onRegisterResult,
-  onSavePreset,
-  onDeletePreset,
-  notify,
-  execution,
-  onLogClick,
-}) => {
+const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ onLogClick }) => {
+  const {
+    users,
+    presets,
+    deployedNodeCount,
+    registerResult,
+    savePreset,
+    deletePreset,
+    addToast,
+    execution,
+  } = useGlobalStore();
+
   // --- UI States ---
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(true);
   const [newPresetName, setNewPresetName] = useState('');
@@ -55,7 +40,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
   });
 
   // --- Custom Hooks ---
-  const config = useExperimentConfig(users, deployedNodeCount, notify, onSavePreset);
+  const config = useExperimentConfig();
 
   // Bottom Panel Resizer (初期高さ 450px)
   const bottomPanel = useResizerPanel(450, 100, 0.8);
@@ -142,11 +127,10 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
             failCount={failCount}
             pendingCount={pendingCount}
             isExecutionRunning={execution.isExecutionRunning}
-            onRecalculateAll={() => execution.handleRecalculateAll(users)}
+            onRecalculateAll={() => execution.recalculateAll(users)}
             onExecute={() => execution.executeScenarios(config.projectName)}
             onErrorClick={(id, reason) => setErrorModal({ isOpen: true, id, reason })}
             onLogClick={onLogClick}
-            // ▼▼▼ ここを追加しました ▼▼▼
             onRemoveScenario={execution.removeScenario}
             onClearAllScenarios={execution.clearAllScenarios}
           />
@@ -169,7 +153,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           setNewPresetName={setNewPresetName}
           onSave={onSaveClick}
           onLoad={config.loadPreset}
-          onDelete={onDeletePreset}
+          onDelete={deletePreset}
           deployedNodeCount={deployedNodeCount}
         />
       </div>

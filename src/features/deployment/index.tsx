@@ -7,13 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { useDeploymentControl } from './hooks/useDeploymentControl';
-
-interface DeploymentLayerProps {
-  setDeployedNodeCount: (count: number) => void;
-  deployedNodeCount: number;
-  setIsDockerBuilt: (isBuilt: boolean) => void;
-  isDockerBuilt: boolean;
-}
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 /**
  * Deployment Layer
@@ -22,12 +16,8 @@ interface DeploymentLayerProps {
  * 破壊的な操作（リセット）や長時間かかる処理（ビルド）があるため、
  * モーダルによる確認やログ表示によってプロセスの可視化を重視しています。
  */
-const DeploymentLayer: React.FC<DeploymentLayerProps> = ({
-  setDeployedNodeCount,
-  deployedNodeCount,
-  setIsDockerBuilt,
-  isDockerBuilt,
-}) => {
+const DeploymentLayer: React.FC = () => {
+  const { isDockerBuilt } = useGlobalStore();
   // Custom Hook
   const {
     scaleCount,
@@ -38,7 +28,7 @@ const DeploymentLayer: React.FC<DeploymentLayerProps> = ({
     handleBuild,
     handleDeploy,
     handleReset: controlReset,
-  } = useDeploymentControl(deployedNodeCount, setDeployedNodeCount, setIsDockerBuilt);
+  } = useDeploymentControl();
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 

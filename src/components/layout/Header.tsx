@@ -1,5 +1,3 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/components/layout/Header.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -16,32 +14,36 @@ import {
   Coins,
   Trash2,
 } from 'lucide-react';
-import { NotificationItem, ExperimentScenario, UserAccount } from '../../types';
-import { useScenarioExecution } from '../../features/experiment/hooks/useScenarioExecution';
+import { ExperimentScenario } from '../../types';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 interface HeaderProps {
-  deployedNodeCount: number;
-  notifications: NotificationItem[];
-  isNotificationOpen: boolean;
-  setIsNotificationOpen: (open: boolean) => void;
-  clearNotifications: () => void;
-  notificationRef: React.RefObject<HTMLDivElement>;
-  execution: ReturnType<typeof useScenarioExecution>;
   onLogClick: (scenario: ExperimentScenario) => void;
-  users: UserAccount[];
 }
 
-export const Header: React.FC<HeaderProps> = ({
-  deployedNodeCount,
-  notifications,
-  isNotificationOpen,
-  setIsNotificationOpen,
-  clearNotifications,
-  notificationRef,
-  execution,
-  onLogClick,
-  users,
-}) => {
+export const Header: React.FC<HeaderProps> = ({ onLogClick }) => {
+  const {
+    deployedNodeCount,
+    notifications,
+    isNotificationOpen,
+    setIsNotificationOpen,
+    clearNotifications,
+    execution,
+    users,
+  } = useGlobalStore();
+
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setIsNotificationOpen]);
+
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const queueRef = useRef<HTMLDivElement>(null);
 
@@ -146,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {canRecalculate && (
                     <button
-                      onClick={() => execution.handleRecalculateAll(users)}
+                      onClick={() => execution.recalculateAll(users)}
                       className="p-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                       title="一括再試算"
                     >

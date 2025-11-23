@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+import { useGlobalStore } from '../../../stores/useGlobalStore';
 
 /**
  * デプロイメント制御のためのHook
  * Dockerビルド、ノードのスケーリング、クラスタのリセットを管理します
  */
-export const useDeploymentControl = (
-  deployedNodeCount: number,
-  setDeployedNodeCount: (count: number) => void,
-  setIsDockerBuilt: (isBuilt: boolean) => void
-) => {
+export const useDeploymentControl = () => {
+  const { deployedNodeCount, setDeployedNodeCount, setIsDockerBuilt } = useGlobalStore();
   const [scaleCount, setScaleCount] = useState(deployedNodeCount);
   const [isBuilding, setIsBuilding] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);

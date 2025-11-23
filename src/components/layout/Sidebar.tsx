@@ -4,20 +4,17 @@ import React from 'react';
 import { AppLayer } from '../../types';
 import { NAV_ITEMS } from '../../utils/constants';
 import { ChevronRight, Info, Loader2, TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 interface SidebarProps {
   activeLayer: AppLayer;
   setActiveLayer: (layer: AppLayer) => void;
-  isExecutionRunning?: boolean;
-  baseFeeInfo: { current: number; change: number; next: number; average: number } | null;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  activeLayer,
-  setActiveLayer,
-  isExecutionRunning,
-  baseFeeInfo,
-}) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer }) => {
+  const { execution, baseFeeInfo } = useGlobalStore();
+  const isExecutionRunning = execution.isExecutionRunning;
+
   const isUp = baseFeeInfo && baseFeeInfo.change >= 0;
   const changeColor = baseFeeInfo ? (isUp ? 'text-red-400' : 'text-emerald-400') : 'text-slate-500';
   const ChangeIcon = isUp ? TrendingUp : TrendingDown;

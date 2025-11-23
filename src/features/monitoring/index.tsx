@@ -10,12 +10,10 @@ import { BottomPanel } from '../../components/ui/BottomPanel';
 import { MempoolChart } from './components/MempoolChart'; // ローカルコンポーネントとしてインポート
 import { useResizerPanel } from '../../hooks/useResizerPanel';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
-interface MonitoringLayerProps {
-  setDeployedNodeCount: (n: number) => void;
-}
-
-const MonitoringLayer: React.FC<MonitoringLayerProps> = ({ setDeployedNodeCount }) => {
+const MonitoringLayer: React.FC = () => {
+  const { setDeployedNodeCount } = useGlobalStore();
   const [nodes, setNodes] = useState<NodeStatus[]>([]);
   const [mempoolData, setMempoolData] = useState<any[]>([]);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);

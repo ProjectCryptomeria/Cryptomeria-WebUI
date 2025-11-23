@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserAccount, SystemAccount } from '../../types';
+import { UserAccount } from '../../types';
 import {
   Wallet,
   Plus,
@@ -12,24 +12,15 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  AlertTriangle,
   Eye,
 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { TableStyles } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Modal, ModalHeader } from '../../components/ui/Modal';
-
-interface EconomyLayerProps {
-  users: UserAccount[];
-  systemAccounts: SystemAccount[];
-  onCreateUser: () => void;
-  onDeleteUser: (id: string) => void;
-  onFaucet: (id: string) => void;
-}
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 /**
  * Economy Layer
@@ -37,13 +28,9 @@ interface EconomyLayerProps {
  * ブロックチェーン上の経済圏（トークン残高）を管理する画面。
  * ウォレットのようなUIを目指し、アカウントカードや送金操作を直感的に行えるようにしています。
  */
-const EconomyLayer: React.FC<EconomyLayerProps> = ({
-  users,
-  systemAccounts,
-  onCreateUser,
-  onDeleteUser,
-  onFaucet,
-}) => {
+const EconomyLayer: React.FC = () => {
+  const { users, systemAccounts, createUser, deleteUser, faucet } = useGlobalStore();
+
   const [watchdogEnabled, setWatchdogEnabled] = useState(true);
   const [isSystemExpanded, setIsSystemExpanded] = useState(false); // デフォルトで閉じる
   const [viewPrivateKeyUser, setViewPrivateKeyUser] = useState<UserAccount | null>(null);
@@ -52,7 +39,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({
 
   const confirmDelete = () => {
     if (deleteConfirmId) {
-      onDeleteUser(deleteConfirmId);
+      deleteUser(deleteConfirmId);
       setDeleteConfirmId(null);
     }
   };
@@ -67,7 +54,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({
         iconColor="text-yellow-500"
         action={
           <Button
-            onClick={onCreateUser}
+            onClick={createUser}
             icon={Plus}
             variant="primary"
             className="shadow-lg shadow-blue-200"
@@ -260,7 +247,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({
                         size="sm"
                         variant="secondary"
                         className="text-emerald-600 border-emerald-100 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-200"
-                        onClick={() => onFaucet(user.id)}
+                        onClick={() => faucet(user.id)}
                       >
                         + Faucet
                       </Button>
@@ -334,7 +321,7 @@ const EconomyLayer: React.FC<EconomyLayerProps> = ({
                           size="sm"
                           variant="secondary"
                           className="text-xs py-1 h-auto"
-                          onClick={() => onFaucet(acc.id)}
+                          onClick={() => faucet(acc.id)}
                         >
                           Top up
                         </Button>

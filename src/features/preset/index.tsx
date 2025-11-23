@@ -7,11 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { PresetCard } from './components/PresetCard';
 import { PresetDetailsPanel } from './components/PresetDetailsPanel';
-
-interface PresetLayerProps {
-  presets: ExperimentPreset[];
-  onDeletePreset: (id: string) => void;
-}
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 /**
  * Preset Layer
@@ -19,7 +15,8 @@ interface PresetLayerProps {
  * 実験設定のテンプレート（プリセット）を管理する画面。
  * 保存された設定を視覚的にわかりやすくカード形式で表示し、ワンクリックで詳細確認や削除を行えます。
  */
-const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) => {
+const PresetLayer: React.FC = () => {
+  const { presets, deletePreset } = useGlobalStore();
   const [selectedPreset, setSelectedPreset] = useState<ExperimentPreset | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
@@ -29,7 +26,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
 
   const confirmDelete = () => {
     if (deleteTargetId) {
-      onDeletePreset(deleteTargetId);
+      deletePreset(deleteTargetId);
       if (selectedPreset?.id === deleteTargetId) {
         setSelectedPreset(null);
       }

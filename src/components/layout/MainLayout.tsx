@@ -1,73 +1,37 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/components/layout/MainLayout.tsx
-
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { Toast } from '../../types';
-import { AppLayer, NotificationItem, ExperimentScenario, UserAccount } from '../../types';
+import { AppLayer, ExperimentScenario } from '../../types';
 import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { useScenarioExecution } from '../../features/experiment/hooks/useScenarioExecution';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 interface MainLayoutProps {
   children: React.ReactNode;
   activeLayer: AppLayer;
   setActiveLayer: (layer: AppLayer) => void;
-  deployedNodeCount: number;
-  notifications: NotificationItem[];
-  isNotificationOpen: boolean;
-  setIsNotificationOpen: (open: boolean) => void;
-  clearNotifications: () => void;
-  notificationRef: React.RefObject<HTMLDivElement>;
-  toasts: Toast[];
-  isExecutionRunning: boolean;
-  execution: ReturnType<typeof useScenarioExecution>;
   onLogClick: (scenario: ExperimentScenario) => void;
-  users: UserAccount[];
-  baseFeeInfo: { current: number; change: number; next: number; average: number } | null;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   activeLayer,
   setActiveLayer,
-  deployedNodeCount,
-  notifications,
-  isNotificationOpen,
-  setIsNotificationOpen,
-  clearNotifications,
-  notificationRef,
-  toasts,
-  isExecutionRunning,
-  execution,
   onLogClick,
-  users,
-  baseFeeInfo,
 }) => {
+  const { toasts, execution, baseFeeInfo } = useGlobalStore();
+
+  const isExecutionRunning = execution.isExecutionRunning;
+
   return (
     // レイアウト変更: flex-row -> flex-col (ヘッダーを上にするため)
     <div className="flex flex-col h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
       {/* Header: 最上部に配置 */}
-      <Header
-        deployedNodeCount={deployedNodeCount}
-        notifications={notifications}
-        isNotificationOpen={isNotificationOpen}
-        setIsNotificationOpen={setIsNotificationOpen}
-        clearNotifications={clearNotifications}
-        notificationRef={notificationRef}
-        execution={execution}
-        onLogClick={onLogClick}
-        users={users}
-      />
+      <Header onLogClick={onLogClick} />
 
       {/* 下部エリア: サイドバーとメインコンテンツを横並びにする */}
       <div className="flex flex-1 overflow-hidden relative z-0">
         {/* Sidebar */}
-        <Sidebar
-          activeLayer={activeLayer}
-          setActiveLayer={setActiveLayer}
-          isExecutionRunning={isExecutionRunning}
-          baseFeeInfo={baseFeeInfo}
-        />
+        <Sidebar activeLayer={activeLayer} setActiveLayer={setActiveLayer} />
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col min-w-0 bg-white relative shadow-2xl z-0 overflow-hidden">

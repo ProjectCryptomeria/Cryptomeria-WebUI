@@ -1,43 +1,22 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/App.tsx
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from './components/layout/MainLayout';
 import DeploymentLayer from './features/deployment';
 import EconomyLayer from './features/economy';
-import { useEconomyManagement } from './features/economy/hooks/useEconomyManagement';
 import ExperimentLayer from './features/experiment';
-import { useScenarioExecution } from './features/experiment/hooks/useScenarioExecution';
 import LibraryLayer from './features/library';
 import MonitoringLayer from './features/monitoring';
 import PresetLayer from './features/preset';
-import { useNotification } from './hooks/useNotification';
-import { api } from './services/api';
-import {
-  AppLayer,
-  ExperimentConfig,
-  ExperimentPreset,
-  ExperimentResult,
-  ExperimentScenario,
-  MonitoringUpdate,
-} from './types';
+import { AppLayer, ExperimentScenario, MonitoringUpdate } from './types';
 import { Modal } from './components/ui/Modal';
 import { LogViewer } from './components/ui/LogViewer';
 import { Loader2, CheckCircle, AlertCircle, Clock, X } from 'lucide-react';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useGlobalStore } from './stores/useGlobalStore';
 
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
-  const [deployedNodeCount, setDeployedNodeCount] = useState<number>(5);
-  const [isDockerBuilt, setIsDockerBuilt] = useState<boolean>(false);
-
-  // Base Feeの状態管理 (拡張: next, average)
-  const [baseFeeInfo, setBaseFeeInfo] = useState<{
-    current: number;
-    change: number;
-    next: number;
-    average: number;
-  } | null>(null);
+  const { setDeployedNodeCount, setBaseFeeInfo, loadData, execution } = useGlobalStore();
 
   // WebSocketからBase Feeのモニタリングデータを受信
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
@@ -49,93 +28,14 @@ const App: React.FC = () => {
         average: data.averageBaseFee || data.currentBaseFee,
       });
     }
-    // MonitoringLayerと重複するが、ここではBaseFee取得に特化し、他はLayerに任せる
     setDeployedNodeCount(data.deployedCount);
   });
 
-  const {
-    toasts,
-    notifications,
-    isNotificationOpen,
-    setIsNotificationOpen,
-    notificationRef,
-    addToast,
-    clearNotifications,
-  } = useNotification();
-
-  const {
-    users,
-    systemAccounts,
-    handleCreateUser,
-    handleDeleteUser,
-    handleFaucet,
-    refresh: refreshEconomy,
-  } = useEconomyManagement(deployedNodeCount, addToast);
-
-  const [results, setResults] = useState<ExperimentResult[]>([]);
-  const [presets, setPresets] = useState<ExperimentPreset[]>([]);
+  useEffect(() => {
+    loadData();
+  }, [activeLayer]); // Reload data when layer changes (or just once on mount if preferred, but original had dependency)
 
   const [logScenarioId, setLogScenarioId] = useState<string | null>(null);
-
-  const loadData = async () => {
-    try {
-      const [resResults, resPresets] = await Promise.all([
-        api.library.getResults(),
-        api.preset.getAll(),
-      ]);
-      setResults(resResults);
-      setPresets(resPresets);
-    } catch (e) {
-      console.error('Failed to load initial data', e);
-    }
-  };
-
-  React.useEffect(() => {
-    loadData();
-  }, [activeLayer]);
-
-  const handleSavePreset = async (name: string, config: ExperimentConfig, generatorState?: any) => {
-    const existing = presets.find(s => s.name === name);
-    const newPreset: ExperimentPreset = {
-      id: existing ? existing.id : crypto.randomUUID(),
-      name,
-      config,
-      generatorState,
-      lastModified: new Date().toISOString(),
-    };
-
-    try {
-      await api.preset.save(newPreset);
-      addToast(
-        'success',
-        'プリセット保存完了',
-        `プリセット「${name}」を${existing ? '更新' : '作成'}しました。`
-      );
-      loadData();
-    } catch (e) {
-      addToast('error', '保存エラー', 'プリセットの保存に失敗しました。');
-    }
-  };
-
-  const handleDeletePreset = async (id: string) => {
-    try {
-      await api.preset.delete(id);
-      addToast('success', '削除完了', 'プリセットを削除しました。');
-      loadData();
-    } catch (e) {
-      addToast('error', '削除エラー', 'プリセットの削除に失敗しました。');
-    }
-  };
-
-  const handleDeleteResult = (id: string) => {
-    api.library.deleteResult(id).then(() => {
-      setResults(results.filter(r => r.id !== id));
-      addToast('success', '削除完了', '実験結果ログを削除しました。');
-    });
-  };
-  const handleRegisterResult = (result: ExperimentResult) => setResults(prev => [result, ...prev]);
-
-  const execution = useScenarioExecution(addToast, handleRegisterResult, refreshEconomy);
 
   const handleLogClick = (scenario: ExperimentScenario) => {
     setLogScenarioId(scenario.uniqueId);
@@ -151,69 +51,25 @@ const App: React.FC = () => {
       <MainLayout
         activeLayer={activeLayer}
         setActiveLayer={setActiveLayer}
-        deployedNodeCount={deployedNodeCount}
-        notifications={notifications}
-        isNotificationOpen={isNotificationOpen}
-        setIsNotificationOpen={setIsNotificationOpen}
-        clearNotifications={clearNotifications}
-        notificationRef={notificationRef}
-        toasts={toasts}
-        isExecutionRunning={execution.isExecutionRunning}
-        execution={execution}
         onLogClick={handleLogClick}
-        users={users}
-        baseFeeInfo={baseFeeInfo}
       >
         {(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
           <div className="absolute inset-0 overflow-hidden">
-            {activeLayer === AppLayer.MONITORING && (
-              <MonitoringLayer setDeployedNodeCount={setDeployedNodeCount} />
-            )}
-            {activeLayer === AppLayer.EXPERIMENT && (
-              <ExperimentLayer
-                users={users}
-                presets={presets}
-                deployedNodeCount={deployedNodeCount}
-                onRegisterResult={handleRegisterResult}
-                onSavePreset={handleSavePreset}
-                notify={addToast}
-                onDeletePreset={handleDeletePreset}
-                execution={execution}
-                onLogClick={handleLogClick}
-              />
-            )}
+            {activeLayer === AppLayer.MONITORING && <MonitoringLayer />}
+            {activeLayer === AppLayer.EXPERIMENT && <ExperimentLayer onLogClick={handleLogClick} />}
           </div>
         )}
 
         {!(activeLayer === AppLayer.MONITORING || activeLayer === AppLayer.EXPERIMENT) && (
           <div className="h-full w-full p-6 sm:p-8 overflow-y-auto custom-scrollbar bg-slate-50/50">
             <div className="max-w-[1600px] mx-auto min-h-full flex flex-col">
-              {activeLayer === AppLayer.DEPLOYMENT && (
-                <DeploymentLayer
-                  setDeployedNodeCount={setDeployedNodeCount}
-                  deployedNodeCount={deployedNodeCount}
-                  setIsDockerBuilt={setIsDockerBuilt}
-                  isDockerBuilt={isDockerBuilt}
-                />
-              )}
+              {activeLayer === AppLayer.DEPLOYMENT && <DeploymentLayer />}
 
-              {activeLayer === AppLayer.ECONOMY && (
-                <EconomyLayer
-                  users={users}
-                  systemAccounts={systemAccounts}
-                  onCreateUser={handleCreateUser}
-                  onDeleteUser={handleDeleteUser}
-                  onFaucet={handleFaucet}
-                />
-              )}
+              {activeLayer === AppLayer.ECONOMY && <EconomyLayer />}
 
-              {activeLayer === AppLayer.PRESET && (
-                <PresetLayer presets={presets} onDeletePreset={handleDeletePreset} />
-              )}
+              {activeLayer === AppLayer.PRESET && <PresetLayer />}
 
-              {activeLayer === AppLayer.LIBRARY && (
-                <LibraryLayer results={results} onDeleteResult={handleDeleteResult} />
-              )}
+              {activeLayer === AppLayer.LIBRARY && <LibraryLayer />}
             </div>
           </div>
         )}

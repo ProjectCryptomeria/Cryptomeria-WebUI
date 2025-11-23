@@ -23,11 +23,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TableStyles } from '../../components/ui/Table';
 import { useTableFilterSort } from './hooks/useTableFilterSort';
-
-interface LibraryLayerProps {
-  results: ExperimentResult[];
-  onDeleteResult: (id: string) => void;
-}
+import { useGlobalStore } from '../../stores/useGlobalStore';
 
 /**
  * Library Layer
@@ -35,7 +31,9 @@ interface LibraryLayerProps {
  * 過去の実験結果をリスト表示し、検索・フィルタリング・エクスポートを行う画面。
  * データ量が増えても管理しやすいよう、テーブルのソート機能や検索バーを充実させています。
  */
-const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) => {
+const LibraryLayer: React.FC = () => {
+  const { results, deleteResult } = useGlobalStore();
+
   // Custom Hook for Table Logic
   const {
     processedData: processedResults,
@@ -63,7 +61,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
 
   const confirmDelete = () => {
     if (selectedResultId) {
-      onDeleteResult(selectedResultId);
+      deleteResult(selectedResultId);
       setSelectedResultId(null);
       setShowDeleteConfirm(false);
     }

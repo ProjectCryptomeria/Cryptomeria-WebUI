@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
 	AllocatorStrategy,
 	TransmitterStrategy,
-	UserAccount,
-	ExperimentConfig,
 	ExperimentPreset,
 	NodeStatus,
 	MonitoringUpdate,
@@ -11,17 +9,14 @@ import {
 import { useFileUploadTree } from './useFileUploadTree';
 import { mapStateToPresetConfig, mapPresetToState, ExperimentFormState } from '../utils/mappers';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+import { useGlobalStore } from '../../../stores/useGlobalStore';
 
 /**
  * 実験設定フォームの状態とロジックを管理するHook
  */
-export const useExperimentConfig = (
-	users: UserAccount[],
-	// deployedNodeCount は WebSocket から取得するため引数からは基本不要になりますが、初期値として残すか、内部で管理します
-	initialDeployedCount: number,
-	notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void,
-	onSavePresetAPI: (name: string, config: ExperimentConfig, generatorState?: any) => void
-) => {
+export const useExperimentConfig = () => {
+	const { users, addToast, savePreset } = useGlobalStore();
+
 	// --- WebSocket Data (Nodes Status) ---
 	const [nodes, setNodes] = useState<NodeStatus[]>([]);
 
@@ -67,7 +62,7 @@ export const useExperimentConfig = (
 		new Set([TransmitterStrategy.ONE_BY_ONE])
 	);
 
-	const { uploadStats, setUploadStats, fileInputRef, processFiles } = useFileUploadTree(notify);
+	const { uploadStats, setUploadStats, fileInputRef, processFiles } = useFileUploadTree(addToast);
 
 	// --- Initialization Effects ---
 
@@ -109,7 +104,7 @@ export const useExperimentConfig = (
 
 	const handleSavePreset = (newPresetName: string) => {
 		if (!newPresetName) {
-			notify('error', 'エラー', 'プリセット名を入力してください');
+			addToast('error', 'エラー', 'プリセット名を入力してください');
 			return;
 		}
 
@@ -127,7 +122,7 @@ export const useExperimentConfig = (
 		};
 
 		const { config, generatorState } = mapStateToPresetConfig(currentState);
-		onSavePresetAPI(newPresetName, config, generatorState);
+		savePreset(newPresetName, config, generatorState);
 	};
 
 	const loadPreset = (preset: ExperimentPreset) => {
@@ -159,7 +154,7 @@ export const useExperimentConfig = (
 		if (newState.selectedAllocators) setSelectedAllocators(newState.selectedAllocators);
 		if (newState.selectedTransmitters) setSelectedTransmitters(newState.selectedTransmitters);
 
-		notify('success', 'ロード完了', `プリセット "${preset.name}" を読み込みました`);
+		addToast('success', 'ロード完了', `プリセット "${preset.name}" を読み込みました`);
 	};
 
 	const getCurrentState = (): ExperimentFormState => ({
