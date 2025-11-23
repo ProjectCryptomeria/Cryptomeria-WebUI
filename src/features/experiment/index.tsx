@@ -111,7 +111,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-32">
             {/* --- Header Added Here --- */}
             <PageHeader
-              title="実験実行"
+              title="Experiment Configuration"
               description="実験シナリオのパラメータ設定と実行、バッチ処理の管理"
               icon={TestTube}
               iconColor="text-scenario-accent"

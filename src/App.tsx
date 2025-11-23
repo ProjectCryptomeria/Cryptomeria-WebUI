@@ -65,27 +65,36 @@ const App: React.FC = () => {
 
     try {
       await api.preset.save(newPreset);
-      addToast('success', 'Saved', `Preset "${name}" ${existing ? 'updated' : 'created'}.`);
+      // 修正: 日本語化
+      addToast(
+        'success',
+        'プリセット保存完了',
+        `プリセット「${name}」を${existing ? '更新' : '作成'}しました。`
+      );
       loadData();
     } catch (e) {
-      addToast('error', 'Error', 'Failed to save preset');
+      // 修正: 日本語化
+      addToast('error', '保存エラー', 'プリセットの保存に失敗しました。');
     }
   };
 
   const handleDeletePreset = async (id: string) => {
     try {
       await api.preset.delete(id);
-      addToast('success', 'Deleted', 'Preset removed.');
+      // 修正: 日本語化
+      addToast('success', '削除完了', 'プリセットを削除しました。');
       loadData();
     } catch (e) {
-      addToast('error', 'Error', 'Failed to delete preset');
+      // 修正: 日本語化
+      addToast('error', '削除エラー', 'プリセットの削除に失敗しました。');
     }
   };
 
   const handleDeleteResult = (id: string) => {
     api.library.deleteResult(id).then(() => {
       setResults(results.filter(r => r.id !== id));
-      addToast('success', 'Deleted', 'Result log removed.');
+      // 修正: 日本語化
+      addToast('success', '削除完了', '実験結果ログを削除しました。');
     });
   };
   const handleRegisterResult = (result: ExperimentResult) => setResults(prev => [result, ...prev]);

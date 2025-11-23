@@ -98,6 +98,26 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
       <ChevronDown className="w-3 h-3 ml-1" />
     );
 
+  // カラム名表示マッピング
+  const columnLabels: { [key: string]: string } = {
+    executedAt: '実行日時',
+    scenarioName: 'シナリオ名',
+    status: 'ステータス',
+    allocator: 'アロケータ',
+    dataSizeMB: 'データサイズ',
+    throughputBps: 'スループット',
+  };
+
+  // AllocatorとTransmitterのバッジ表示用コンポーネント (灰色バッジを使用)
+  const StrategyBadge = ({ value }: { value: string }) => (
+    <Badge
+      color="slate"
+      className="font-mono bg-slate-100 text-slate-700 border-slate-200 justify-center w-20 text-center px-1 py-1"
+    >
+      {value}
+    </Badge>
+  );
+
   return (
     <div className="space-y-6 pb-20 h-full flex flex-col">
       <PageHeader
@@ -147,7 +167,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
         <div className="p-6 pt-0 space-y-6">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-              File Name
+              ファイル名
             </label>
             <Input value={exportFilename} onChange={e => setExportFilename(e.target.value)} />
           </div>
@@ -230,20 +250,18 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
               {/* Basic Info Section */}
               <section>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 mb-4">
-                  Basic Information
+                  基本情報
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">
-                      Executed At
-                    </div>
+                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">実行日時</div>
                     <div className="font-mono text-sm font-bold text-slate-700">
                       {new Date(viewDetailResult.executedAt).toLocaleString()}
                     </div>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                     <div className="text-xs text-slate-400 font-bold uppercase mb-1">
-                      Result Status
+                      結果ステータス
                     </div>
                     <StatusBadge status={viewDetailResult.status} />
                   </div>
@@ -253,14 +271,14 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
               {/* Settings Section */}
               <section>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 mb-4">
-                  Parameters
+                  実行パラメータ
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { l: 'Data Size', v: `${viewDetailResult.dataSizeMB} MB` },
-                    { l: 'Chunk Size', v: `${viewDetailResult.chunkSizeKB} KB` },
-                    { l: 'Allocator', v: viewDetailResult.allocator },
-                    { l: 'Transmitter', v: viewDetailResult.transmitter },
+                    { l: 'データサイズ', v: `${viewDetailResult.dataSizeMB} MB` },
+                    { l: 'チャンクサイズ', v: `${viewDetailResult.chunkSizeKB} KB` },
+                    { l: 'アロケータ', v: viewDetailResult.allocator },
+                    { l: 'トランスミッタ', v: viewDetailResult.transmitter },
                   ].map((item, i) => (
                     <div
                       key={i}
@@ -276,23 +294,23 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
               {/* Performance Section */}
               <section className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-100 shadow-inner">
                 <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Performance Metrics
+                  <Clock className="w-4 h-4" /> パフォーマンスメトリクス
                 </h4>
                 <div className="grid grid-cols-3 gap-4 text-center divide-x divide-blue-200/50">
                   <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Upload</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">アップロード時間</div>
                     <div className="font-mono font-bold text-xl text-slate-800">
                       {(viewDetailResult.uploadTimeMs / 1000).toFixed(2)}s
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Download</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">ダウンロード時間</div>
                     <div className="font-mono font-bold text-xl text-slate-800">
                       {(viewDetailResult.downloadTimeMs / 1000).toFixed(2)}s
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Throughput</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">スループット</div>
                     <div className="font-mono font-bold text-xl text-blue-600">
                       {(viewDetailResult.throughputBps / 1024 / 1024).toFixed(2)}
                       <span className="text-xs ml-1">Mbps</span>
@@ -317,7 +335,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
-              placeholder="Search scenario name or ID..."
+              placeholder="シナリオ名またはIDを検索..."
               className="pl-10"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -337,7 +355,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
                   <button
                     key={s}
                     onClick={() => {
-                      addFilter('status', s, 'Status');
+                      addFilter('status', s, 'ステータス');
                       setIsFilterMenuOpen(false);
                     }}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 rounded-xl transition-colors font-medium text-slate-600"
@@ -380,13 +398,11 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
             ))}
             <button
               onClick={() => {
-                /* Handled in hook, need expose clearer if needed, but simple set [] works */
-                /* But hook exposes simple array mutators. Let's assume we can iterate to remove or add a clearAll to hook. For now just clear manually by removing all indices? No, simpler to add clearAll to hook or iterate. Hook exposes setFilters? No. I'll just map remove. Wait, setFilters is internal to hook. I should expose a reset function or simply allow direct access if I change the hook signature. Actually, `removeFilter` removes by index. I can just iterate backwards. OR, better, update hook to expose `clearFilters`. I didn't add that to hook. I'll just use a loop or skip "Clear all" button for now to stay strict to the hook definition I wrote? No, I can add it to the hook. I'll add `setFilters` or `clearFilters` to the hook for better DX. */
-                /* I will add setFilters to the hook return for flexibility */
+                /* I'll add setFilters to the hook return for flexibility */
               }}
               className="text-xs text-slate-400 underline hover:text-slate-600 ml-2"
             >
-              Clear all
+              すべてクリア
             </button>
           </div>
         )}
@@ -412,12 +428,11 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
                     onClick={() => handleSort(k as keyof ExperimentResult)}
                   >
                     <div className="flex items-center gap-1">
-                      {k.replace(/([A-Z])/g, ' $1').trim()}{' '}
-                      <SortIcon columnKey={k as keyof ExperimentResult} />
+                      {columnLabels[k]} <SortIcon columnKey={k as keyof ExperimentResult} />
                     </div>
                   </th>
                 ))}
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-6 py-4 text-right">アクション</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -427,7 +442,7 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
                   onClick={() => setSelectedResultId(r.id === selectedResultId ? null : r.id)}
                   className={`group transition-colors cursor-pointer ${selectedResultId === r.id ? 'bg-blue-50/60' : 'hover:bg-slate-50'}`}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-3">
                     <div
                       className={`font-mono font-medium ${selectedResultId === r.id ? 'text-blue-700 font-bold' : 'text-slate-600'}`}
                     >
@@ -438,25 +453,25 @@ const LibraryLayer: React.FC<LibraryLayerProps> = ({ results, onDeleteResult }) 
                       {new Date(r.executedAt).toLocaleString()}
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-slate-800">{r.scenarioName}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-3 font-bold text-slate-800">{r.scenarioName}</td>
+                  <td className="px-6 py-3">
                     <StatusBadge status={r.status} />
                   </td>
-                  <td className="px-6 py-4 text-slate-600 text-xs">
-                    <div className="font-medium bg-slate-100 inline-block px-2 py-0.5 rounded mb-1">
-                      {r.allocator}
+                  <td className="px-6 py-3 text-xs">
+                    <div className="flex flex-col gap-1.5">
+                      <StrategyBadge value={r.allocator} />
+                      <StrategyBadge value={r.transmitter} />
                     </div>
-                    <div className="text-slate-400">{r.transmitter}</div>
                   </td>
-                  <td className="px-6 py-4 font-mono text-slate-600 font-bold">
+                  <td className="px-6 py-3 font-mono text-slate-600 font-bold">
                     {r.dataSizeMB}{' '}
                     <span className="text-[10px] text-slate-400 font-normal">MB</span>
                   </td>
-                  <td className="px-6 py-4 font-mono font-bold text-slate-800">
+                  <td className="px-6 py-3 font-mono font-bold text-slate-800">
                     {(r.throughputBps / 1024 / 1024).toFixed(2)}{' '}
                     <span className="text-[10px] text-slate-400 font-normal">Mbps</span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-3 text-right">
                     <Button
                       variant="ghost"
                       size="sm"

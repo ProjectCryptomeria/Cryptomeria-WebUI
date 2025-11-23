@@ -56,18 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
           {isNotificationOpen && (
             <div className="absolute right-0 mt-4 w-96 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
               <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <h3 className="font-bold text-slate-800">Notifications</h3>
+                <h3 className="font-bold text-slate-800">通知一覧</h3>
                 <button
                   onClick={clearNotifications}
                   className="text-xs font-bold text-blue-600 hover:text-blue-800"
                 >
-                  Clear All
+                  すべてクリア
                 </button>
               </div>
               <div className="max-h-96 overflow-y-auto custom-scrollbar p-2 space-y-1">
                 {notifications.length === 0 ? (
                   <div className="p-10 text-center text-slate-400 text-sm font-medium">
-                    No new notifications
+                    新しい通知はありません
                   </div>
                 ) : (
                   notifications.map(n => (
