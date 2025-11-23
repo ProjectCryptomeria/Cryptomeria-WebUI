@@ -1,7 +1,23 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/backend_mock/MockServer.ts
 
-import { ExperimentScenario, ExperimentResult, NodeStatus, UserAccount, SystemAccount, MonitoringUpdate, PacketEvent, MempoolInfo, ExperimentPreset } from '../types';
-import { generateMockNodes, generateMockUsers, generateSystemAccounts, generateMockResults, generateMockPresets } from './mockData';
+import {
+  ExperimentScenario,
+  ExperimentResult,
+  NodeStatus,
+  UserAccount,
+  SystemAccount,
+  MonitoringUpdate,
+  PacketEvent,
+  MempoolInfo,
+  ExperimentPreset,
+} from '../types';
+import {
+  generateMockNodes,
+  generateMockUsers,
+  generateSystemAccounts,
+  generateMockResults,
+  generateMockPresets,
+} from './mockData';
 
 /**
  * Mock Backend Service
@@ -32,7 +48,7 @@ export class VirtualSocket {
       }
 
       if (this.onopen) this.onopen();
-      this.cleanup = MockServer.subscribe(url, (data) => {
+      this.cleanup = MockServer.subscribe(url, data => {
         if (this.onmessage && !this.isClosed) {
           this.onmessage({ data: JSON.stringify(data) });
         }
@@ -79,53 +95,65 @@ class MockServerInstance {
     this.systemAccounts = generateSystemAccounts(this.deployedNodeCount);
     this.results = generateMockResults();
     this.presets = generateMockPresets();
-    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: Math.floor(Math.random() * 50) }));
+    this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({
+      name: `data-${i}`,
+      txs: Math.floor(Math.random() * 50),
+    }));
   }
 
   // --- Event Loop (Heartbeat) ---
   private startEventLoop() {
     // 1. Monitoring Heartbeat (1s)
-    this.intervals.push(setInterval(() => {
-      this.updateNodes();
-      this.broadcast('/ws/monitoring', {
-        nodes: this.nodes,
-        mempool: this.mempool,
-        deployedCount: this.deployedNodeCount
-      } as MonitoringUpdate);
-    }, 1000));
+    this.intervals.push(
+      setInterval(() => {
+        this.updateNodes();
+        this.broadcast('/ws/monitoring', {
+          nodes: this.nodes,
+          mempool: this.mempool,
+          deployedCount: this.deployedNodeCount,
+        } as MonitoringUpdate);
+      }, 1000)
+    );
 
     // 2. Packet Generator (Random)
-    this.intervals.push(setInterval(() => {
-      if (this.deployedNodeCount > 0 && Math.random() > 0.6) {
-        const targetIdx = Math.floor(Math.random() * this.deployedNodeCount);
-        const packet: PacketEvent = {
-          id: `pkt-${Date.now()}`,
-          from: 'control-chain',
-          to: `datachain-${targetIdx}`,
-          type: 'ibc_transfer',
-          timestamp: Date.now()
-        };
-        this.broadcast('/ws/monitoring/packets', packet);
-      }
-    }, 1500));
+    this.intervals.push(
+      setInterval(() => {
+        if (this.deployedNodeCount > 0 && Math.random() > 0.6) {
+          const targetIdx = Math.floor(Math.random() * this.deployedNodeCount);
+          const packet: PacketEvent = {
+            id: `pkt-${Date.now()}`,
+            from: 'control-chain',
+            to: `datachain-${targetIdx}`,
+            type: 'ibc_transfer',
+            timestamp: Date.now(),
+          };
+          this.broadcast('/ws/monitoring/packets', packet);
+        }
+      }, 1500)
+    );
   }
 
   private updateNodes() {
     if (this.nodes.length !== 2 + this.deployedNodeCount) {
       this.nodes = generateMockNodes(this.deployedNodeCount);
-      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({ name: `data-${i}`, txs: 0 }));
+      this.mempool = Array.from({ length: this.deployedNodeCount }, (_, i) => ({
+        name: `data-${i}`,
+        txs: 0,
+      }));
     }
 
     this.nodes = this.nodes.map(n => ({
       ...n,
       height: n.height + (n.status === 'active' && Math.random() > 0.7 ? 1 : 0),
-      txCount: n.txCount + (n.status === 'active' && Math.random() > 0.5 ? Math.floor(Math.random() * 5) : 0),
-      latency: Math.max(5, n.latency + Math.floor(Math.random() * 10) - 5)
+      txCount:
+        n.txCount +
+        (n.status === 'active' && Math.random() > 0.5 ? Math.floor(Math.random() * 5) : 0),
+      latency: Math.max(5, n.latency + Math.floor(Math.random() * 10) - 5),
     }));
 
     this.mempool = this.mempool.map(m => ({
       ...m,
-      txs: Math.max(0, m.txs + (Math.random() > 0.5 ? 5 : -10) + Math.floor(Math.random() * 5))
+      txs: Math.max(0, m.txs + (Math.random() > 0.5 ? 5 : -10) + Math.floor(Math.random() * 5)),
     }));
   }
 
@@ -165,12 +193,12 @@ class MockServerInstance {
 
   private startBuildJob(jobId: string) {
     const logs = [
-      "Building context: 124.5MB transferred.",
-      "Step 1/5 : FROM golang:1.22-alpine as builder",
-      "Step 2/5 : WORKDIR /app",
-      "Step 3/5 : COPY . .",
-      "Step 4/5 : RUN go build -o datachain ./cmd/datachain",
-      "Successfully built image 'raidchain/node:latest'"
+      'Building context: 124.5MB transferred.',
+      'Step 1/5 : FROM golang:1.22-alpine as builder',
+      'Step 2/5 : WORKDIR /app',
+      'Step 3/5 : COPY . .',
+      'Step 4/5 : RUN go build -o datachain ./cmd/datachain',
+      "Successfully built image 'raidchain/node:latest'",
     ];
     let step = 0;
     const interval = setInterval(() => {
@@ -194,7 +222,9 @@ class MockServerInstance {
   }
 
   // Economy
-  async getUsers() { return { users: [...this.users], system: [...this.systemAccounts] }; }
+  async getUsers() {
+    return { users: [...this.users], system: [...this.systemAccounts] };
+  }
 
   async createUser() {
     const newUser: UserAccount = {
@@ -202,7 +232,7 @@ class MockServerInstance {
       address: `raid1${Math.random().toString(36).substring(7)}${Math.random().toString(36).substring(7)}`,
       balance: 0,
       role: 'client',
-      name: `Client ${this.users.length}`
+      name: `Client ${this.users.length}`,
     };
     this.users.push(newUser);
     return newUser;
@@ -215,9 +245,9 @@ class MockServerInstance {
 
   async faucet(targetId: string, amount: number) {
     const millionaire = this.systemAccounts.find(a => a.type === 'faucet_source');
-    if (!millionaire || millionaire.balance < amount) throw new Error("Pool Empty");
+    if (!millionaire || millionaire.balance < amount) throw new Error('Pool Empty');
 
-    let targetName = "";
+    let targetName = '';
     millionaire.balance -= amount;
 
     const user = this.users.find(u => u.id === targetId);
@@ -245,17 +275,31 @@ class MockServerInstance {
     for (const scenario of scenarios) {
       if (scenario.status !== 'READY') continue;
 
-      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, status: 'RUNNING', log: '[INFO] Initializing transaction batch...' });
+      this.broadcast('/ws/experiment/progress', {
+        executionId,
+        scenarioId: scenario.id,
+        status: 'RUNNING',
+        log: '[INFO] Initializing transaction batch...',
+      });
       await new Promise(r => setTimeout(r, 800));
 
-      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, log: '[INFO] Broadcast Tx: 0x3a...f1' });
+      this.broadcast('/ws/experiment/progress', {
+        executionId,
+        scenarioId: scenario.id,
+        log: '[INFO] Broadcast Tx: 0x3a...f1',
+      });
       await new Promise(r => setTimeout(r, 800));
 
       const success = Math.random() > 0.15;
       const status = success ? 'COMPLETE' : 'FAIL';
       const log = success ? '[SUCCESS] Data commited to block.' : '[ERROR] Consensus timeout.';
 
-      this.broadcast('/ws/experiment/progress', { executionId, scenarioId: scenario.id, status, log });
+      this.broadcast('/ws/experiment/progress', {
+        executionId,
+        scenarioId: scenario.id,
+        status,
+        log,
+      });
 
       if (success) {
         this.results.unshift({
@@ -273,18 +317,25 @@ class MockServerInstance {
           uploadTimeMs: 1234,
           downloadTimeMs: 567,
           throughputBps: 1000000,
-          logs: scenario.logs
+          logs: scenario.logs,
         });
       }
     }
     this.broadcast('/ws/experiment/progress', { executionId, type: 'ALL_COMPLETE' });
   }
 
-  async getResults() { return this.results; }
-  async deleteResult(id: string) { this.results = this.results.filter(r => r.id !== id); return true; }
+  async getResults() {
+    return this.results;
+  }
+  async deleteResult(id: string) {
+    this.results = this.results.filter(r => r.id !== id);
+    return true;
+  }
 
   // Preset
-  async getPresets() { return this.presets; }
+  async getPresets() {
+    return this.presets;
+  }
   async savePreset(preset: ExperimentPreset) {
     const index = this.presets.findIndex(p => p.id === preset.id);
     if (index >= 0) {

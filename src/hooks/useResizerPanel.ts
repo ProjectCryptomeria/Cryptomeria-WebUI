@@ -1,88 +1,126 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/hooks/useResizerPanel.ts
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * リサイズ可能なパネルの制御Hook
- * * 【パフォーマンス & UX改善版】
+ * * 【パフォーマンス & UX改善版 v2】
  * 1. DOM直接操作による再レンダリング回避（ラグ排除）
  * 2. ドラッグ中のCSS transition無効化（追従性向上）
+ * 3. ドラッグ状態(isDragging)の公開（子コンポーネントの描画抑制用）
+ * 4. [NEW] 開閉アニメーション中(isTransitioning)の検知と公開
  */
 export const useResizerPanel = (
-	initialHeight: number = 320,
-	minHeight: number = 100,
-	maxHeightRatio: number = 0.8
+  initialHeight: number = 320,
+  minHeight: number = 100,
+  maxHeightRatio: number = 0.8
 ) => {
-	const [isOpen, setIsOpen] = useState(false);
-	const [height, setHeight] = useState(initialHeight);
+  const [isOpen, setIsOpenState] = useState(false);
+  const [height, setHeight] = useState(initialHeight);
 
-	const panelRef = useRef<HTMLDivElement>(null);
-	const resizerRef = useRef<HTMLDivElement>(null);
-	const isDragging = useRef(false);
+  // ドラッグ中フラグ
+  const [isDragging, setIsDragging] = useState(false);
+  // [NEW] アニメーション中フラグ
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-	useEffect(() => {
-		const resizer = resizerRef.current;
-		if (!resizer) return;
+  const panelRef = useRef<HTMLDivElement>(null);
+  const resizerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-		const handleMouseDown = (e: MouseEvent) => {
-			e.preventDefault();
-			isDragging.current = true;
+  // [NEW] 開閉操作をラップしてアニメーションフラグを制御
+  const setIsOpen = useCallback((nextIsOpen: boolean | ((prev: boolean) => boolean)) => {
+    setIsOpenState(prev => {
+      const nextValue = typeof nextIsOpen === 'function' ? nextIsOpen(prev) : nextIsOpen;
 
-			// 【重要】ドラッグ開始時にtransition（アニメーション）を無効化する
-			// これにより、マウスの動きに対して遅延なく追従するようになる
-			if (panelRef.current) {
-				panelRef.current.style.transition = 'none';
-			}
+      // 状態が変わる場合のみアニメーションフラグを立てる
+      if (prev !== nextValue) {
+        setIsTransitioning(true);
+        if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
 
-			document.addEventListener('mousemove', handleMouseMove);
-			document.addEventListener('mouseup', handleMouseUp);
-			document.body.style.cursor = 'row-resize';
-			document.body.style.userSelect = 'none';
-		};
+        // CSSのtransition: 0.3s に合わせてフラグを下ろす (+マージン)
+        transitionTimerRef.current = setTimeout(() => {
+          setIsTransitioning(false);
+          transitionTimerRef.current = null;
+        }, 350);
+      }
+      return nextValue;
+    });
+  }, []);
 
-		const handleMouseMove = (e: MouseEvent) => {
-			if (!isDragging.current || !panelRef.current) return;
+  useEffect(() => {
+    // クリーンアップ
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, []);
 
-			const newHeight = window.innerHeight - e.clientY;
-			const maxHeight = window.innerHeight * maxHeightRatio;
+  useEffect(() => {
+    const resizer = resizerRef.current;
+    if (!resizer) return;
 
-			if (newHeight > 80 && newHeight < maxHeight) {
-				panelRef.current.style.height = `${newHeight}px`;
-			}
-		};
+    const handleMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      setIsDragging(true);
 
-		const handleMouseUp = () => {
-			isDragging.current = false;
-			document.removeEventListener('mousemove', handleMouseMove);
-			document.removeEventListener('mouseup', handleMouseUp);
-			document.body.style.cursor = '';
-			document.body.style.userSelect = '';
+      if (panelRef.current) {
+        panelRef.current.style.transition = 'none';
+      }
 
-			if (panelRef.current) {
-				// 【重要】ドラッグ終了時にtransition設定を削除（元に戻す）
-				// これにより、開閉ボタン操作時のアニメーションは維持される
-				panelRef.current.style.transition = '';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    };
 
-				const currentHeight = panelRef.current.clientHeight;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || !panelRef.current) return;
 
-				if (currentHeight < 120) {
-					setIsOpen(false);
-					setHeight(initialHeight);
-					panelRef.current.style.removeProperty('height');
-				} else {
-					setHeight(currentHeight);
-					if (!isOpen) setIsOpen(true);
-				}
-			}
-		};
+      const newHeight = window.innerHeight - e.clientY;
+      const maxHeight = window.innerHeight * maxHeightRatio;
 
-		resizer.addEventListener('mousedown', handleMouseDown);
-		return () => {
-			resizer.removeEventListener('mousedown', handleMouseDown);
-			document.removeEventListener('mousemove', handleMouseMove);
-			document.removeEventListener('mouseup', handleMouseUp);
-		};
-	}, [isOpen, minHeight, maxHeightRatio, initialHeight]);
+      if (newHeight > 80 && newHeight < maxHeight) {
+        panelRef.current.style.height = `${newHeight}px`;
+      }
+    };
 
-	return { isOpen, setIsOpen, height, panelRef, resizerRef };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      if (panelRef.current) {
+        panelRef.current.style.transition = '';
+
+        const currentHeight = panelRef.current.clientHeight;
+
+        if (currentHeight < 120) {
+          // ここは内部ロジックなので直接State更新でも良いが、
+          // 一貫性のためラッパー経由で閉じる（アニメーションフラグも立つ）
+          setIsOpen(false);
+          setHeight(initialHeight);
+          panelRef.current.style.removeProperty('height');
+        } else {
+          setHeight(currentHeight);
+          // ドラッグ終了後に自動で開く場合はアニメーション不要なので直接State更新
+          if (!isOpen) setIsOpenState(true);
+        }
+      }
+    };
+
+    resizer.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      resizer.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isOpen, minHeight, maxHeightRatio, initialHeight, setIsOpen]);
+
+  // isTransitioning も返すように変更
+  return { isOpen, setIsOpen, height, panelRef, resizerRef, isDragging, isTransitioning };
 };

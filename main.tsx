@@ -11,7 +11,7 @@ import App from './App';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error('Could not find root element to mount to');
 }
 
 // --- MSWのセットアップ関数: workerを起動するロジックを追加 ---
@@ -30,18 +30,21 @@ async function enableMocking() {
         onUnhandledRequest: 'bypass',
         serviceWorker: {
           // index.htmlで読み込まれるサービスワーカーのパスを指定
-          url: '/mockServiceWorker.js'
-        }
+          url: '/mockServiceWorker.js',
+        },
       }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("MSW start timed out (missing mockServiceWorker.js?)")), 5000)
-      )
+        setTimeout(
+          () => reject(new Error('MSW start timed out (missing mockServiceWorker.js?)')),
+          5000
+        )
+      ),
     ]);
 
-    console.log("MSW worker started successfully.");
+    console.log('MSW worker started successfully.');
   } catch (error) {
-    console.error("Failed to start MSW worker:", error);
-    console.warn("Application will continue without mocking. API requests may fail.");
+    console.error('Failed to start MSW worker:', error);
+    console.warn('Application will continue without mocking. API requests may fail.');
     // エラーが発生してもアプリケーションは続行できるようにします。
   }
 }

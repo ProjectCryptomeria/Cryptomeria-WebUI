@@ -81,7 +81,7 @@ export const handlers = [
     const config = await request.json();
 
     // 簡易試算ロジック
-    const sizeMB = config.virtualConfig?.sizeMB || (config.realConfig?.totalSizeMB || 0);
+    const sizeMB = config.virtualConfig?.sizeMB || config.realConfig?.totalSizeMB || 0;
     const chainCount = config.targetChains?.length || 1;
     const cost = sizeMB * 0.5 + chainCount * 10;
 

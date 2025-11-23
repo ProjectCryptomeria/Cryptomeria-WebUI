@@ -18,7 +18,7 @@ export const api = {
       const response = await fetch('/api/deployment/scale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ replicaCount })
+        body: JSON.stringify({ replicaCount }),
       });
       if (!response.ok) throw new Error('Scale failed');
       return response.json();
@@ -27,7 +27,7 @@ export const api = {
       const response = await fetch('/api/deployment/reset', { method: 'DELETE' });
       if (!response.ok) throw new Error('Reset failed');
       return response.json();
-    }
+    },
   },
   economy: {
     getUsers: async () => {
@@ -49,18 +49,18 @@ export const api = {
       const response = await fetch('/api/economy/faucet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId, amount })
+        body: JSON.stringify({ targetId, amount }),
       });
       if (!response.ok) throw new Error('Faucet failed');
       return response.json();
-    }
+    },
   },
   experiment: {
     estimate: async (config: ExperimentConfig) => {
       const response = await fetch('/api/experiment/estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(config),
       });
       if (!response.ok) throw new Error('Estimate failed');
       return response.json();
@@ -69,11 +69,11 @@ export const api = {
       const response = await fetch('/api/experiment/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenarios })
+        body: JSON.stringify({ scenarios }),
       });
       if (!response.ok) throw new Error('Experiment run failed');
       return response.json();
-    }
+    },
   },
   library: {
     getResults: async () => {
@@ -85,7 +85,7 @@ export const api = {
       const response = await fetch(`/api/library/results/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete result');
       return response.json();
-    }
+    },
   },
   preset: {
     getAll: async () => {
@@ -97,7 +97,7 @@ export const api = {
       const response = await fetch('/api/presets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(preset)
+        body: JSON.stringify(preset),
       });
       if (!response.ok) throw new Error('Failed to save preset');
       return response.json();
@@ -106,6 +106,6 @@ export const api = {
       const response = await fetch(`/api/presets/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete preset');
       return response.json();
-    }
-  }
+    },
+  },
 };

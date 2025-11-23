@@ -1,4 +1,3 @@
-
 import { NodeStatus, AllocatorStrategy, TransmitterStrategy } from '../types';
 import { ExperimentPreset, ExperimentResult, UserAccount, SystemAccount } from '../types';
 
@@ -11,7 +10,14 @@ import { ExperimentPreset, ExperimentResult, UserAccount, SystemAccount } from '
 // 指定された数のDataChainと、固定のControl/MetaChainを生成します。
 export const generateMockNodes = (count: number): NodeStatus[] => {
   const nodes: NodeStatus[] = [
-    { id: 'control-chain', type: 'control', status: 'active', height: 12045, txCount: 5, latency: 12 },
+    {
+      id: 'control-chain',
+      type: 'control',
+      status: 'active',
+      height: 12045,
+      txCount: 5,
+      latency: 12,
+    },
     { id: 'meta-chain', type: 'meta', status: 'active', height: 12040, txCount: 12, latency: 15 },
   ];
 
@@ -39,7 +45,13 @@ export const generateMockUsers = (): UserAccount[] => [
 // Faucetの原資となるMillionaireアカウントと、各チェーンのRelayerアカウントを生成します。
 export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] => {
   const accounts: SystemAccount[] = [
-    { id: 'sys-millionaire', name: 'Millionaire (Pool)', address: 'raid1_genesis_pool_inf', balance: 1000000000, type: 'faucet_source' }
+    {
+      id: 'sys-millionaire',
+      name: 'Millionaire (Pool)',
+      address: 'raid1_genesis_pool_inf',
+      balance: 1000000000,
+      type: 'faucet_source',
+    },
   ];
   for (let i = 0; i < dataChainCount; i++) {
     accounts.push({
@@ -47,11 +59,11 @@ export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] 
       name: `Relayer(Chain - ${i})`,
       address: `raid1_relayer_ch${i} _addr`,
       balance: 50, // 初期残高は少なめに設定（Watchdogの動作確認用）
-      type: 'relayer'
+      type: 'relayer',
     });
   }
   return accounts;
-}
+};
 
 // プリセット画面用: 初期プリセットデータ
 export const generateMockPresets = (): ExperimentPreset[] => [
@@ -65,7 +77,7 @@ export const generateMockPresets = (): ExperimentPreset[] => [
       targetChains: ['datachain-0'],
       uploadType: 'Virtual',
       projectName: 'latency-check-project',
-      virtualConfig: { sizeMB: 100, chunkSizeKB: 64, files: 10 }
+      virtualConfig: { sizeMB: 100, chunkSizeKB: 64, files: 10 },
     },
     generatorState: {
       projectName: 'latency-check-project',
@@ -75,8 +87,8 @@ export const generateMockPresets = (): ExperimentPreset[] => [
       allocators: [AllocatorStrategy.ROUND_ROBIN],
       transmitters: [TransmitterStrategy.ONE_BY_ONE],
       selectedChains: ['datachain-0'],
-      uploadType: 'Virtual'
-    }
+      uploadType: 'Virtual',
+    },
   },
   {
     id: 'preset-2',
@@ -88,7 +100,7 @@ export const generateMockPresets = (): ExperimentPreset[] => [
       targetChains: ['datachain-0', 'datachain-1', 'datachain-2'],
       uploadType: 'Virtual',
       projectName: 'stress-test-project',
-      virtualConfig: { sizeMB: 5120, chunkSizeKB: 128, files: 500 }
+      virtualConfig: { sizeMB: 5120, chunkSizeKB: 128, files: 500 },
     },
     generatorState: {
       projectName: 'stress-test-project',
@@ -98,9 +110,9 @@ export const generateMockPresets = (): ExperimentPreset[] => [
       allocators: [AllocatorStrategy.AVAILABLE],
       transmitters: [TransmitterStrategy.MULTI_BURST],
       selectedChains: ['datachain-0', 'datachain-1', 'datachain-2'],
-      uploadType: 'Virtual'
-    }
-  }
+      uploadType: 'Virtual',
+    },
+  },
 ];
 
 // ライブラリ画面用: 過去の実験結果データ
@@ -122,11 +134,11 @@ export const generateMockResults = (): ExperimentResult[] => {
       downloadTimeMs: 10000,
       throughputBps: 23860929,
       logs: [
-        "[System] Initializing baseline test...",
-        "[Upload] Starting 1GB data generation.",
-        "[Network] Broadcast complete.",
-        "[System] Success."
-      ]
+        '[System] Initializing baseline test...',
+        '[Upload] Starting 1GB data generation.',
+        '[Network] Broadcast complete.',
+        '[System] Success.',
+      ],
     },
     {
       id: 'exp-002',
@@ -144,10 +156,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       downloadTimeMs: 2000,
       throughputBps: 0,
       logs: [
-        "[System] Initializing stress test...",
-        "[Error] Connection timeout on datachain-3.",
-        "[Fatal] Aborted."
-      ]
+        '[System] Initializing stress test...',
+        '[Error] Connection timeout on datachain-3.',
+        '[Fatal] Aborted.',
+      ],
     },
     {
       id: 'exp-003',
@@ -164,11 +176,7 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 22000,
       downloadTimeMs: 10000,
       throughputBps: 33554432,
-      logs: [
-        "[System] Load Balance check start.",
-        "[Info] All nodes active.",
-        "[System] Done."
-      ]
+      logs: ['[System] Load Balance check start.', '[Info] All nodes active.', '[System] Done.'],
     },
   ];
 };

@@ -1,4 +1,3 @@
-
 import { AppLayer } from '../types';
 import { Activity, Server, Coins, TestTube, Library, ScrollText } from 'lucide-react';
 
@@ -49,7 +48,7 @@ export const NAV_ITEMS = [
  * デプロイメント画面のコンソール初期ログ
  */
 export const MOCK_INITIAL_LOGS = [
-  "[System] RaidChain WebUI Controller initialized.",
-  "[System] Connected to Kubernetes Cluster (minikube).",
-  "[System] Database integrity check passed.",
+  '[System] RaidChain WebUI Controller initialized.',
+  '[System] Connected to Kubernetes Cluster (minikube).',
+  '[System] Database integrity check passed.',
 ];
