@@ -27,7 +27,9 @@ const MonitoringLayer: React.FC<MonitoringLayerProps> = ({ setDeployedNodeCount 
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
     setNodes(data.nodes);
     setMempoolData(data.mempool);
-    setDeployedNodeCount(data.deployedCount);
+    setTimeout(() => {
+      setDeployedNodeCount(data.deployedCount);
+    }, 0);
   });
 
   return (

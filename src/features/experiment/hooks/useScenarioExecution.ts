@@ -42,8 +42,12 @@ export const useScenarioExecution = (
           const nextLogs = msg.log ? [...s.logs, msg.log] : s.logs;
 
           // [修正] RUNNING ステータスに遷移したときに通知を出す
+          // Cannot update a component (`App`) while rendering a different component エラーを回避するため
+          // setTimeout でラップしてレンダリングサイクル外で実行する
           if (msg.status === 'RUNNING' && s.status !== 'RUNNING') {
-            notify('success', '実行開始', `シナリオ #${s.id} の実行を開始しました。`);
+            setTimeout(() => {
+              notify('success', '実行開始', `シナリオ #${s.id} の実行を開始しました。`);
+            }, 0);
           }
 
           return {
