@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { ExperimentPreset } from '../../types';
 import {
-  Trash2,
   FileText,
-  Clock,
   Settings2,
-  X,
   Database,
   Puzzle,
   Network,
@@ -14,15 +11,15 @@ import {
   Layers,
   Hash,
   ChevronDown,
-  Monitor,
   Bookmark,
+  Monitor,
 } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
 import { SlideOver } from '../../components/ui/SlideOver';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
+import { PresetCard } from './components/PresetCard';
 
 interface PresetLayerProps {
   presets: ExperimentPreset[];
@@ -39,9 +36,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
   const [selectedPreset, setSelectedPreset] = useState<ExperimentPreset | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleDeleteClick = (id: string) => {
     setDeleteTargetId(id);
   };
 
@@ -54,25 +49,6 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
       setDeleteTargetId(null);
     }
   };
-
-  // 表示用ヘルパー関数
-  const getSizeDisplay = (preset: ExperimentPreset) =>
-    preset.generatorState
-      ? preset.generatorState.dataSize.mode === 'range'
-        ? `${preset.generatorState.dataSize.start}-${preset.generatorState.dataSize.end}MB`
-        : `${preset.generatorState.dataSize.fixed}MB`
-      : `${preset.config.virtualConfig?.sizeMB || 0}MB`;
-  const getChunkDisplay = (preset: ExperimentPreset) =>
-    preset.generatorState
-      ? preset.generatorState.chunkSize.mode === 'range'
-        ? `${preset.generatorState.chunkSize.start}-${preset.generatorState.chunkSize.end}KB`
-        : `${preset.generatorState.chunkSize.fixed}KB`
-      : `${preset.config.virtualConfig?.chunkSizeKB}KB`;
-  const getChainCount = (preset: ExperimentPreset) =>
-    preset.generatorState
-      ? preset.generatorState.selectedChains.length
-      : preset.config.targetChains.length;
-
   const DetailRow = ({
     label,
     value,
@@ -142,6 +118,24 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
     </div>
   );
 
+  // ヘルパー（詳細パネル表示用）
+  const getSizeDisplay = (preset: ExperimentPreset) =>
+    preset.generatorState
+      ? preset.generatorState.dataSize.mode === 'range'
+        ? `${preset.generatorState.dataSize.start}-${preset.generatorState.dataSize.end}MB`
+        : `${preset.generatorState.dataSize.fixed}MB`
+      : `${preset.config.virtualConfig?.sizeMB || 0}MB`;
+  const getChunkDisplay = (preset: ExperimentPreset) =>
+    preset.generatorState
+      ? preset.generatorState.chunkSize.mode === 'range'
+        ? `${preset.generatorState.chunkSize.start}-${preset.generatorState.chunkSize.end}KB`
+        : `${preset.generatorState.chunkSize.fixed}KB`
+      : `${preset.config.virtualConfig?.chunkSizeKB}KB`;
+  const getChainCount = (preset: ExperimentPreset) =>
+    preset.generatorState
+      ? preset.generatorState.selectedChains.length
+      : preset.config.targetChains.length;
+
   return (
     <div className="h-full flex flex-col pb-10">
       <PageHeader
@@ -181,7 +175,7 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
         </div>
       </Modal>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+      <div className="flex-1 overflow-y-auto custom-scrollbar pt-2 pr-2">
         {presets.length === 0 ? (
           <div className="h-96 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/30">
             <div className="p-4 bg-slate-100 rounded-full mb-4">
@@ -193,57 +187,13 @@ const PresetLayer: React.FC<PresetLayerProps> = ({ presets, onDeletePreset }) =>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
             {presets.map(preset => (
-              <Card
+              <PresetCard
                 key={preset.id}
+                preset={preset}
+                isSelected={selectedPreset?.id === preset.id}
                 onClick={() => setSelectedPreset(preset)}
-                className={`p-6 h-full group hover:shadow-xl transition-all duration-300 cursor-pointer relative flex flex-col justify-between border-2 ${selectedPreset?.id === preset.id ? 'border-blue-500 ring-4 ring-blue-50 shadow-xl' : 'border-transparent hover:border-blue-200'}`}
-              >
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-4 overflow-hidden">
-                      <div
-                        className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center shadow-sm ${selectedPreset?.id === preset.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500'}`}
-                      >
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3
-                          className={`font-bold text-lg truncate ${selectedPreset?.id === preset.id ? 'text-blue-700' : 'text-slate-800'}`}
-                          title={preset.name}
-                        >
-                          {preset.name}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 font-medium mt-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(preset.lastModified).toLocaleString('ja-JP')}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={e => handleDeleteClick(e, preset.id)}
-                      className="text-slate-300 hover:text-red-500 hover:bg-red-50 w-8 h-8 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-6">
-                    <Badge color="blue" className="flex items-center gap-1.5">
-                      <Database className="w-3 h-3" />
-                      {getSizeDisplay(preset)}
-                    </Badge>
-                    <Badge color="purple" className="flex items-center gap-1.5">
-                      <Puzzle className="w-3 h-3" />
-                      {getChunkDisplay(preset)}
-                    </Badge>
-                    <Badge color="green" className="flex items-center gap-1.5">
-                      <Monitor className="w-3 h-3" />
-                      {getChainCount(preset)} Chains
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
+                onDelete={handleDeleteClick}
+              />
             ))}
           </div>
         )}
