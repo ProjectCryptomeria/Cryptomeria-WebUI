@@ -130,7 +130,7 @@ const ExperimentLayer: React.FC<ExperimentLayerProps> = ({
             />
 
             {/* Spacer for Bottom Panel */}
-            <div className="h-[50px] w-full pointer-events-none" aria-hidden="true" />
+            <div className="h-[80px] w-full pointer-events-none" aria-hidden="true" />
           </div>
 
           {/* --- 生成結果パネル (ボトム) --- */}

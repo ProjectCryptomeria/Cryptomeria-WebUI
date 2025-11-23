@@ -106,7 +106,7 @@ export const ExperimentConfigForm: React.FC<ExperimentConfigFormProps> = ({
   }, [uploadStats.tree]);
 
   return (
-    <div className="space-y-6 mb-10">
+    <div className="space-y-6">
       {/* --- 基本設定セクション --- */}
       <Card className="overflow-hidden rounded-3xl shadow-soft border-gray-100">
         <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center rounded-t-3xl">
