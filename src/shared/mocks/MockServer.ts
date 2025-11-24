@@ -1,6 +1,6 @@
 // syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/backend_mock/MockServer.ts
 
-import { MempoolInfo, MonitoringUpdate, NodeStatus, PacketEvent } from '@/entities/node';
+import { MempoolInfo, MonitoringUpdate, NodeStatus, PacketEvent, BlockEvent } from '@/entities/node';
 import {
   generateMockNodes,
   generateMockUsers,
@@ -79,6 +79,9 @@ class MockServerInstance {
   // Feeの状態を保持 (静的値)
   private minGasPrice: number = getFeeConstants().minGasPrice;
 
+  // [NEW] 実験実行中フラグ (Tx生成トリガー用)
+  private isExperimentRunning = false;
+
   private intervals: NodeJS.Timeout[] = [];
   private subscribers: { [url: string]: ((data: unknown) => void)[] } = {};
 
@@ -131,6 +134,13 @@ class MockServerInstance {
         }
       }, 1500)
     );
+
+    // 3. [NEW] Block Generator (3s) - 全チェーンのブロック生成イベント
+    this.intervals.push(
+      setInterval(() => {
+        this.generateAndBroadcastBlocks();
+      }, 3000)
+    );
   }
 
   private updateNodes() {
@@ -155,8 +165,43 @@ class MockServerInstance {
       ...m,
       txs: Math.max(0, m.txs + (Math.random() > 0.5 ? 5 : -10) + Math.floor(Math.random() * 5)),
     }));
+  }
 
-    // EIP-1559の動的変動ロジックは削除済み (Cosmosモデル準拠)
+  // [NEW] ブロック生成ロジック
+  private generateAndBroadcastBlocks() {
+    // Activeなノードのみブロック生成
+    const activeNodes = this.nodes.filter(n => n.status === 'active');
+    const blockEvents: BlockEvent[] = activeNodes.map(node => {
+      // Tx数の決定ロジック
+      let txCount = 0;
+      if (node.type === 'data' && this.isExperimentRunning) {
+        // 実験実行中のDataChainはTxが混入 (1~10)
+        txCount = Math.floor(Math.random() * 10) + 1;
+      } else if (node.type === 'control' || node.type === 'meta') {
+        // Control/Metaはたまに管理Txが入る程度 (5%の確率で1)
+        txCount = Math.random() > 0.95 ? 1 : 0;
+      }
+
+      // プロポーザーのダミー生成
+      const proposerId = Math.floor(Math.random() * 10);
+
+      return {
+        chainName: node.id,
+        type: node.type,
+        height: node.height, // 現在のHeightを使用
+        timestamp: new Date().toISOString(),
+        hash: Math.random().toString(16).substring(2, 10).toUpperCase(),
+        txCount,
+        proposer: {
+          address: `raidvalcons${Math.random().toString(36).substring(7)}`,
+          label: `Validator-${proposerId}`,
+        },
+      };
+    });
+
+    if (blockEvents.length > 0) {
+      this.broadcast('/ws/monitoring/blocks', blockEvents);
+    }
   }
 
   // --- Pub/Sub System ---
@@ -286,6 +331,9 @@ class MockServerInstance {
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
     const { minGasPrice, gasUsedPerMB } = getFeeConstants();
 
+    // [NEW] 実験実行開始フラグON (ブロックフィードのTxを活性化)
+    this.isExperimentRunning = true;
+
     for (const scenario of scenarios) {
       // 準備完了以外のステータスはスキップ
       if (scenario.status !== 'READY') continue;
@@ -398,6 +446,11 @@ class MockServerInstance {
       });
     }
     this.broadcast('/ws/experiment/progress', { executionId, type: 'ALL_COMPLETE' });
+
+    // [NEW] 実験終了後、少し余韻を持たせてからフラグOFF (ブロックフィードのTxを停止)
+    setTimeout(() => {
+      this.isExperimentRunning = false;
+    }, 5000);
   }
 
   async getResults() {
