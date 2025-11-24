@@ -64,16 +64,12 @@ const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
 
 /**
  * 1ブロックのスパークライン（棒）
- * 【MODIFIED: カスタムポップオーバーの導入】
  */
 const BlockBar: React.FC<{
   block: BlockEvent;
   onClick: (block: BlockEvent) => void;
   maxScale: number;
 }> = ({ block, onClick, maxScale }) => {
-  // [NEW] ホバー状態を管理
-  const [isHovered, setIsHovered] = useState(false);
-
   // ブロックサイズに基づき、高さと色を決定
   const blockSize = block.blockSizeMB;
   const sizeRatio = Math.min(1, blockSize / maxScale); // maxScaleを上限とする
@@ -96,39 +92,10 @@ const BlockBar: React.FC<{
   return (
     <div
       onClick={() => onClick(block)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      title={`Height: ${block.height}, Size: ${blockSize.toFixed(3)} MB, Txs: ${block.txCount}`}
       // [MODIFIED] w-8に拡大、title属性削除
       className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group h-full pb-0 relative`}
     >
-      {/* [NEW] カスタムポップオーバー */}
-      {isHovered && (
-        <div
-          // position popover above the bar
-          className="absolute z-50 bottom-full mb-2 -translate-x-1/2 p-3 bg-slate-800 rounded-xl shadow-xl border border-slate-700 pointer-events-none whitespace-nowrap animate-in fade-in zoom-in-95 duration-100 min-w-max"
-          style={{ left: '50%' }}
-        >
-          <div className="text-[10px] font-bold text-indigo-300 uppercase">
-            Block #{block.height}
-          </div>
-          <div className="text-xs font-mono text-white mt-1 flex flex-col gap-1">
-            <span className="flex justify-between gap-4">
-              <span className="text-slate-400">Size:</span>
-              <span className="text-emerald-400 font-bold">{block.blockSizeMB.toFixed(3)} MB</span>
-            </span>
-            <span className="flex justify-between gap-4">
-              <span className="text-slate-400">Txs:</span>
-              <span className="text-indigo-300 font-bold">{block.txCount}</span>
-            </span>
-            <span className="flex justify-between gap-4 border-t border-slate-700/50 pt-1 mt-1">
-              <span className="text-slate-400">Hash:</span>
-              <span className="text-slate-500">{block.hash.substring(0, 6)}</span>
-            </span>
-          </div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
-        </div>
-      )}
-
       {/* HEIGHTの簡略表示 (バーの上に表示) */}
       <div className="absolute bottom-full mb-1 text-[8px] font-mono font-bold text-slate-500 group-hover:text-slate-800 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap">
         #{block.height % 1000}
