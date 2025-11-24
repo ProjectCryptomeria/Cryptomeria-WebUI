@@ -2,7 +2,7 @@
 // FSD Layer: Features - ユースケースロジック（Zustand Store Slice）の統合ユニットテスト
 
 import { create } from 'zustand';
-import { createExecutionSlice } from '@/features/experiment/model/store';
+import { createExecutionSlice } from '@/features/experiment/models/store';
 import { ExecutionSlice, GlobalState } from '@/shared/store/types';
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';

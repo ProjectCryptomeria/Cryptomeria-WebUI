@@ -1,1 +1,1 @@
-export * from './model/schemas';
+export * from './models/schemas';

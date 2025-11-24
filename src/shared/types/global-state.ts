@@ -5,7 +5,7 @@ import type { Toast, NotificationItem } from './index';
 import type { UserAccount, SystemAccount } from '../../entities/account';
 import type { ExperimentResult } from '../../entities/result';
 import type { ExperimentPreset, GeneratorStateConfig } from '../../entities/preset'; // GeneratorStateConfig を追加
-import type { GenerateScenariosParams } from '../../features/experiment/model/types'; // GenerateScenariosParamsをインポート
+import type { GenerateScenariosParams } from '../../features/experiment/models/types'; // GenerateScenariosParamsをインポート
 import type {
   ExperimentScenario,
   ExperimentConfig,

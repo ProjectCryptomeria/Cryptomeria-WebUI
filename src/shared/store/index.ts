@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { GlobalState } from './types';
 
 // Import Slices
-import { createNotificationSlice } from '../model/notificationStore';
-import { createNodeSlice } from '@/entities/node/model/store';
-import { createEconomySlice } from '@/entities/account/model/store';
-import { createPresetSlice } from '@/entities/preset/model/store';
-import { createLibrarySlice } from '@/entities/result/model/store';
-import { createExecutionSlice } from '@/features/experiment/model/store';
+import { createNotificationSlice } from '../models/notificationStore';
+import { createNodeSlice } from '@/entities/node/models/store';
+import { createEconomySlice } from '@/entities/account/models/store';
+import { createPresetSlice } from '@/entities/preset/models/store';
+import { createLibrarySlice } from '@/entities/result/models/store';
+import { createExecutionSlice } from '@/features/experiment/models/store';
 
 export const useGlobalStore = create<GlobalState>()((...a) => ({
   ...createNotificationSlice(...a),

@@ -2,7 +2,7 @@
 // FSD Layer: Entities - 純粋なドメインロジック（Zustand Store Slice）のユニットテスト
 
 import { create } from 'zustand';
-import { createEconomySlice } from '@/entities/account/model/store';
+import { createEconomySlice } from '@/entities/account/models/store';
 import { EconomySlice, GlobalState } from '@/shared/store/types';
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';

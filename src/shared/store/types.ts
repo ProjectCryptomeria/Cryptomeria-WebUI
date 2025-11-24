@@ -8,7 +8,7 @@ import type {
   UpdateScenarioParams,
 } from '@/entities/scenario';
 import type { Toast, NotificationItem } from '@/shared/types';
-import { GenerateScenariosParams } from '@/features/experiment/model/types';
+import { GenerateScenariosParams } from '@/features/experiment/models/types';
 
 // --- Slices Interfaces ---
 

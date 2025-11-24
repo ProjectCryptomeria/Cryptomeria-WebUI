@@ -12,7 +12,7 @@ import {
   RunExperimentRequestSchema,
   ExperimentScenario,
 } from '@/entities/scenario';
-import { FaucetRequestSchema } from '@/entities/account/model/schemas';
+import { FaucetRequestSchema } from '@/entities/account/models/schemas';
 import { ScaleRequestSchema } from '@/entities/deployment';
 import { ExperimentPreset } from '@/entities/preset';
 

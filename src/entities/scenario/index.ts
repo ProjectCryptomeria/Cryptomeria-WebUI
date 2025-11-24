@@ -1,2 +1,2 @@
-export * from './model/types';
-export * from './model/schemas';
+export * from './models/types';
+export * from './models/schemas';

@@ -1,4 +1,4 @@
-import { ExperimentPreset } from '@/entities/preset/model/types';
+import { ExperimentPreset } from '@/entities/preset/models/types';
 import { ExperimentConfig, AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
 
 // UIで使用するパラメータの型定義

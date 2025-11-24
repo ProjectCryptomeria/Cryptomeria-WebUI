@@ -4,7 +4,7 @@ import type {
   ExperimentConfig,
   AllocatorStrategy,
   TransmitterStrategy,
-} from '../../scenario/model/types';
+} from '../../scenario/models/types';
 
 /**
  * 固定値/範囲指定の設定ブロック
