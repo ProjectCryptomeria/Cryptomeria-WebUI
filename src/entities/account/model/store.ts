@@ -1,9 +1,10 @@
 import { StoreSlice } from '@/shared/store/types';
 import { api } from '@/shared/api';
+import { SystemAccount, UserAccount } from './types';
 
 export const createEconomySlice: StoreSlice<{
-  users: any[];
-  systemAccounts: any[];
+  users: UserAccount[];
+  systemAccounts: SystemAccount[];
   refreshEconomy: () => Promise<void>;
   createUser: () => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
@@ -27,7 +28,7 @@ export const createEconomySlice: StoreSlice<{
       await api.economy.createUser();
       await get().refreshEconomy();
       get().addToast('success', 'アカウント作成完了', '新規ユーザーアカウントを作成しました。');
-    } catch (e) {
+    } catch {
       get().addToast('error', '作成エラー', 'アカウント作成に失敗しました。');
     }
   },
@@ -37,7 +38,7 @@ export const createEconomySlice: StoreSlice<{
       await api.economy.deleteUser(id);
       await get().refreshEconomy();
       get().addToast('success', '削除完了', 'ユーザーアカウントを削除しました。');
-    } catch (e) {
+    } catch {
       get().addToast('error', '削除エラー', 'アカウント削除に失敗しました。');
     }
   },
@@ -51,7 +52,7 @@ export const createEconomySlice: StoreSlice<{
         'TKN 送金成功 (Faucet)',
         `${res.targetName} へ 1000 TKN を送金しました。`
       );
-    } catch (e) {
+    } catch {
       get().addToast('error', 'Faucet 失敗', '資金供給に失敗しました (プール残高不足の可能性)');
     }
   },

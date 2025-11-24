@@ -17,16 +17,7 @@ interface ExperimentLayerProps {
 }
 
 const ExperimentLayer: React.FC<ExperimentLayerProps> = ({ onLogClick }) => {
-  const {
-    users,
-    presets,
-    deployedNodeCount,
-    registerResult,
-    savePreset,
-    deletePreset,
-    addToast,
-    execution,
-  } = useGlobalStore();
+  const { users, presets, deployedNodeCount, deletePreset, execution } = useGlobalStore();
 
   // --- UI States ---
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(true);

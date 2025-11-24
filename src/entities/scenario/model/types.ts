@@ -1,5 +1,7 @@
 // entities/scenario - シナリオ関連の型とモデル
 
+import type { ExperimentResult } from '../../result'; // entities/result からインポート
+
 export enum AllocatorStrategy {
   STATIC = 'Static',
   ROUND_ROBIN = 'RoundRobin',
@@ -13,10 +15,20 @@ export enum TransmitterStrategy {
   MULTI_BURST = 'MultiBurst',
 }
 
+/**
+ * ファイルツリーの構造を表現する再帰的な型
+ */
+export interface FileNode {
+  name: string;
+  type: 'file' | 'directory';
+  sizeMB: number;
+  children?: FileNode[];
+}
+
 export interface RealFileConfig {
   fileCount: number;
   totalSizeMB: number;
-  structure: any; // Tree
+  structure: FileNode; // Tree: anyをFileNodeに変更
 }
 
 export interface ExperimentConfig {
@@ -69,4 +81,10 @@ export interface ExecutionResultDetails {
   actualCost: number;
   refund: number;
   currentBalance: number;
+  result?: ExperimentResult; // anyをExperimentResultに変更
+}
+
+export interface UpdateScenarioParams extends Partial<ExperimentScenario> {
+  log?: string;
+  resultDetails?: ExecutionResultDetails & { result?: ExperimentResult };
 }

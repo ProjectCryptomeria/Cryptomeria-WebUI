@@ -1,13 +1,14 @@
 import { StateCreator } from 'zustand';
 import type { UserAccount, SystemAccount } from '@/entities/account';
 import type { ExperimentResult } from '@/entities/result';
-import type { ExperimentPreset } from '@/entities/preset';
+import type { ExperimentPreset, GeneratorStateConfig } from '@/entities/preset';
 import type {
   ExperimentScenario,
   ExperimentConfig,
-  ExecutionResultDetails,
+  UpdateScenarioParams,
 } from '@/entities/scenario';
 import type { Toast, NotificationItem } from '@/shared/types';
+import { GenerateScenariosParams } from '@/features/experiment/model/types';
 
 // --- Slices Interfaces ---
 
@@ -48,7 +49,7 @@ export interface EconomySlice {
 export interface PresetSlice {
   presets: ExperimentPreset[];
   loadPresets: () => Promise<void>;
-  savePreset: (name: string, config: ExperimentConfig, generatorState?: any) => Promise<void>;
+  savePreset: (name: string, config: ExperimentConfig, generatorState?: GeneratorStateConfig) => Promise<void>;
   deletePreset: (id: string) => Promise<void>;
 }
 
@@ -65,18 +66,15 @@ export interface ExecutionSlice {
     isGenerating: boolean;
     isExecutionRunning: boolean;
     executionId: string | null;
-    generateScenarios: (params: any) => Promise<void>;
+    generateScenarios: (params: GenerateScenariosParams) => Promise<void>;
     executeScenarios: (projectName: string) => Promise<void>;
-    recalculateAll: (users: any[]) => Promise<void>;
+    recalculateAll: (users: UserAccount[]) => Promise<void>;
     reprocessCondition: (id: number) => void;
     removeScenario: (id: number) => void;
     clearAllScenarios: () => void;
     updateScenario: (
       id: string,
-      updates: Partial<ExperimentScenario> & {
-        log?: string;
-        resultDetails?: ExecutionResultDetails & { result?: ExperimentResult };
-      },
+      updates: UpdateScenarioParams,
       isComplete?: boolean
     ) => void;
     updateExecutionStatus: (running: boolean, executionId?: string | null) => void;
@@ -87,11 +85,11 @@ export interface ExecutionSlice {
 // 全てのスライスを結合した型
 export interface GlobalState
   extends NotificationSlice,
-    NodeSlice,
-    EconomySlice,
-    PresetSlice,
-    LibrarySlice,
-    ExecutionSlice {
+  NodeSlice,
+  EconomySlice,
+  PresetSlice,
+  LibrarySlice,
+  ExecutionSlice {
   loadData: () => Promise<void>; // 全データロード用
 }
 

@@ -25,7 +25,7 @@ export const createLibrarySlice: StoreSlice<{
       await api.library.deleteResult(id);
       set({ results: results.filter(r => r.id !== id) });
       addToast('success', '削除完了', '実験結果ログを削除しました。');
-    } catch (e) {
+    } catch {
       addToast('error', '削除エラー', '実験結果の削除に失敗しました。');
     }
   },

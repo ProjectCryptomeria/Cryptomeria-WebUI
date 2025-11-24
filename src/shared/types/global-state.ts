@@ -4,13 +4,13 @@
 import type { Toast, NotificationItem } from './index';
 import type { UserAccount, SystemAccount } from '../../entities/account';
 import type { ExperimentResult } from '../../entities/result';
-import type { ExperimentPreset } from '../../entities/preset';
+import type { ExperimentPreset, GeneratorStateConfig } from '../../entities/preset'; // GeneratorStateConfig を追加
+import type { GenerateScenariosParams } from '../../features/experiment/model/types'; // GenerateScenariosParamsをインポート
 import type {
   ExperimentScenario,
   ExperimentConfig,
-  ScenarioStatus,
   ExecutionResultDetails,
-} from '../../entities/scenario'; // 必要な型をインポート
+} from '../../entities/scenario';
 
 export interface GlobalState {
   // Monitoring / Deployment
@@ -50,7 +50,8 @@ export interface GlobalState {
   results: ExperimentResult[];
   presets: ExperimentPreset[];
   loadData: () => Promise<void>;
-  savePreset: (name: string, config: ExperimentConfig, generatorState?: any) => Promise<void>;
+  // any -> GeneratorStateConfig に変更
+  savePreset: (name: string, config: ExperimentConfig, generatorState?: GeneratorStateConfig) => Promise<void>;
   deletePreset: (id: string) => Promise<void>;
   deleteResult: (id: string) => Promise<void>;
   registerResult: (result: ExperimentResult) => void;
@@ -61,18 +62,20 @@ export interface GlobalState {
     isGenerating: boolean;
     isExecutionRunning: boolean;
     executionId: string | null;
-    generateScenarios: (params: any) => Promise<void>;
+    // any -> GenerateScenariosParams に変更
+    generateScenarios: (params: GenerateScenariosParams) => Promise<void>;
     executeScenarios: (projectName: string) => Promise<void>;
-    recalculateAll: (users: any[]) => Promise<void>;
+    // any[] -> UserAccount[] に変更
+    recalculateAll: (users: UserAccount[]) => Promise<void>;
     reprocessCondition: (id: number) => void;
     removeScenario: (id: number) => void;
     clearAllScenarios: () => void;
-    // ★ 追加: 新しい実行進捗アクションの型定義
+    // ★ 追加: 新しい実行進捗アクションの型定義 (ExecutionResultDetails に result が含まれるように修正)
     updateScenario: (
       id: string,
       updates: Partial<ExperimentScenario> & {
         log?: string;
-        resultDetails?: ExecutionResultDetails & { result?: ExperimentResult };
+        resultDetails?: ExecutionResultDetails;
       },
       isComplete?: boolean
     ) => void;

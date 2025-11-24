@@ -15,6 +15,7 @@ import type {
   ExperimentScenario,
   ScenarioStatus,
   ExecutionResultDetails,
+  UpdateScenarioParams,
 } from '../entities/scenario'; // 必要な型をインポート
 import type { MonitoringUpdate } from '../entities/node';
 import type { ExperimentResult } from '../entities/result'; // 必要な型をインポート
@@ -35,7 +36,7 @@ const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
   // ★ 修正: execution オブジェクトを分割して updateScenario, updateExecutionStatus を取得
-  const { setDeployedNodeCount, setBaseFeeInfo, loadData, execution, addToast } = useGlobalStore();
+  const { setDeployedNodeCount, setBaseFeeInfo, loadData, execution } = useGlobalStore();
 
   // WebSocketからBase Feeのモニタリングデータを受信
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
@@ -52,7 +53,7 @@ const App: React.FC = () => {
 
   // ★ 追加: 実験進捗WebSocketリスナー
   useWebSocket<ProgressMessage>('/ws/experiment/progress', data => {
-    const { executionId, scenarioId, type, status, log, resultDetails } = data;
+    const { scenarioId, type, status, log, resultDetails } = data;
 
     if (type === 'ALL_COMPLETE') {
       execution.updateExecutionStatus(false);
@@ -66,7 +67,7 @@ const App: React.FC = () => {
       const scenario = execution.scenarios.find(s => s.id === scenarioId);
       if (!scenario) return;
 
-      const updates: any = {};
+      const updates: UpdateScenarioParams = {};
       if (status) updates.status = status;
       if (log) updates.log = log;
 
@@ -74,15 +75,7 @@ const App: React.FC = () => {
 
       if (isComplete) {
         // 完了時に必要な詳細データを渡す
-        execution.updateScenario(
-          scenario.uniqueId,
-          {
-            status: status as ScenarioStatus,
-            log: log,
-            resultDetails: resultDetails,
-          },
-          true
-        );
+        execution.updateScenario(scenario.uniqueId, { status, log, resultDetails }, true);
       } else if (status || log) {
         // 実行中またはログの追加
         execution.updateScenario(scenario.uniqueId, updates);
@@ -92,7 +85,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [activeLayer]);
+  }, [activeLayer, loadData]);
 
   const [logScenarioId, setLogScenarioId] = useState<string | null>(null);
 

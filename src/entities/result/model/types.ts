@@ -17,6 +17,10 @@ export interface ExperimentResult {
   uploadTimeMs: number;
   downloadTimeMs: number;
   throughputBps: number;
+  // Economic Metrics
+  gasUsed?: number; // 消費ガス量 (Gas)
+  baseFee?: number; // 実行時のBaseFee (TKN/Gas)
+  actualFee?: number; // 実際にかかったコスト (TKN)
   logs?: string[];
 }
 

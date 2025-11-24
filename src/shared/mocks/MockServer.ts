@@ -385,37 +385,16 @@ class MockServerInstance {
         user.balance += refund;
       }
 
+      // --- 修正箇所: 結果オブジェクトの作成 (Fee情報を含める) ---
+      let resultData: ExperimentResult | undefined = undefined;
+
       if (success) {
-        log = `[SUCCESS] Data commited. Actual Cost: ${actualCost} TKN (Refunded: ${refund} TKN)`;
-      } else {
-        log = `[ERROR] Execution Failed. Gas Used: ${actualCost} TKN (Refunded: ${refund} TKN)`;
-      }
-
-      // 通知用の詳細データを作成
-      const resultDetails: ExecutionResultDetails = {
-        userId: user?.id || 'unknown',
-        userName: user?.name || 'Unknown User',
-        actualCost,
-        refund,
-        currentBalance: user?.balance || 0,
-      };
-
-      // 完了イベント送信 (詳細データを含める)
-      this.broadcast('/ws/experiment/progress', {
-        executionId,
-        scenarioId: scenario.id,
-        status,
-        log,
-        resultDetails, // ← ここで追加
-      });
-
-      // 結果の保存 (成功時のみ)
-      if (success) {
-        this.results.unshift({
+        // 結果データの作成
+        resultData = {
           id: `res-${scenario.uniqueId}`,
           scenarioName: `Batch Execution #${scenario.id}`,
           executedAt: new Date().toISOString(),
-          status: 'SUCCESS',
+          status: 'SUCCESS', // ライブラリ側のステータス定義
           dataSizeMB: scenario.dataSize,
           chunkSizeKB: scenario.chunkSize,
           totalTxCount: Math.floor((scenario.dataSize * 1024) / scenario.chunkSize),
@@ -426,9 +405,39 @@ class MockServerInstance {
           uploadTimeMs: 1234 + Math.random() * 5000,
           downloadTimeMs: 567 + Math.random() * 2000,
           throughputBps: Math.floor(10000000 + Math.random() * 5000000),
+          // Economic Metrics (追加)
+          gasUsed: actualGasUsed,
+          baseFee: currentBaseFee,
+          actualFee: actualCost,
           logs: scenario.logs,
-        });
+        };
+
+        // サーバー内の保存リストに追加
+        this.results.unshift(resultData);
+
+        log = `[SUCCESS] Data commited. Actual Cost: ${actualCost} TKN (Refunded: ${refund} TKN)`;
+      } else {
+        log = `[ERROR] Execution Failed. Gas Used: ${actualCost} TKN (Refunded: ${refund} TKN)`;
       }
+
+      // 通知用の詳細データを作成
+      const resultDetails: ExecutionResultDetails & { result?: ExperimentResult } = {
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
+        actualCost,
+        refund,
+        currentBalance: user?.balance || 0,
+        result: resultData, // ここで渡す
+      };
+
+      // 完了イベント送信 (詳細データを含める)
+      this.broadcast('/ws/experiment/progress', {
+        executionId,
+        scenarioId: scenario.id,
+        status,
+        log,
+        resultDetails, // ← ここで追加
+      });
     }
     this.broadcast('/ws/experiment/progress', { executionId, type: 'ALL_COMPLETE' });
   }

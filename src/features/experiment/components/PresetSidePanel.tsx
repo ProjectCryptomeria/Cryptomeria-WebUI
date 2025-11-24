@@ -1,17 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
 import { ExperimentPreset } from '@/entities/preset';
-import {
-  Bookmark,
-  X,
-  Save,
-  Folder,
-  Clock,
-  Database,
-  Puzzle,
-  RotateCcw,
-  Trash2,
-} from 'lucide-react';
+import { Bookmark, X, Save, Folder, Clock, Database, Puzzle, RotateCcw } from 'lucide-react';
 import { Badge } from '@/shared/ui/Badge';
 
 interface PresetSidePanelProps {
@@ -35,7 +25,6 @@ export const PresetSidePanel: React.FC<PresetSidePanelProps> = ({
   onSave,
   onLoad,
   onDelete,
-  deployedNodeCount,
 }) => {
   // バッジ表示用のヘルパー関数 (ローカル定義)
   const getStrategyBadge = (type: 'allocator' | 'transmitter', value: string) => {

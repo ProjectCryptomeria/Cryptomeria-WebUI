@@ -1,6 +1,43 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/features/experiment/hooks/useFileUploadTree.ts
-
 import { useState, useRef } from 'react';
+
+// --- File Upload Tree 内部で使用する型定義 ---
+
+/**
+ * processFilesで作成される、パス情報を持つファイル/エントリの型
+ */
+interface ProcessedFile {
+  path: string; // webkitRelativePath または zip内のパス
+  name: string;
+  size: number; // バイト単位
+}
+
+/**
+ * buildTreeFromProcessedFilesで構築される中間的なツリーノードの型
+ * childrenがオブジェクト形式である点が特徴
+ */
+interface IntermediateFileNode {
+  name: string;
+  type: 'folder' | 'file';
+  size: number; // バイト単位
+  children?: { [key: string]: IntermediateFileNode };
+}
+
+/**
+ * Hookのステート型
+ */
+interface UploadStats {
+  count: number;
+  sizeMB: number;
+  tree: IntermediateFileNode | null; // anyをIntermediateFileNodeに変更
+  treeOpen: boolean;
+}
+
+/**
+ * Fileオブジェクトの非標準プロパティである webkitRelativePath を扱うための拡張型
+ */
+type FileWithRelativePath = File & { webkitRelativePath?: string };
+
+// ---------------------------------------
 
 /**
  * ファイルアップロードとツリー表示のためのHook
@@ -9,20 +46,36 @@ import { useState, useRef } from 'react';
 export const useFileUploadTree = (
   notify: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void
 ) => {
-  const [uploadStats, setUploadStats] = useState<{
-    count: number;
-    sizeMB: number;
-    tree: any;
-    treeOpen: boolean;
-  }>({ count: 0, sizeMB: 0, tree: null, treeOpen: true });
+  const [uploadStats, setUploadStats] = useState<UploadStats>({ // anyをUploadStatsに変更
+    count: 0,
+    sizeMB: 0,
+    tree: null,
+    treeOpen: true,
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const buildTreeFromProcessedFiles = (files: any[], fileCount: number, totalSize: number) => {
-    const root: any = { name: 'root', children: {}, type: 'folder', size: 0 };
-    files.forEach(file => {
-      const parts = file.path.split('/').filter((p: string) => p.length > 0);
-      let current = root;
+  // files: any[] -> ProcessedFile[] に変更
+  const buildTreeFromProcessedFiles = (
+    files: ProcessedFile[],
+    fileCount: number,
+    totalSize: number
+  ) => {
+    // root: any -> IntermediateFileNode に変更
+    const root: IntermediateFileNode = { name: 'root', children: {}, type: 'folder', size: 0 };
+
+    // fileの型を ProcessedFile に変更
+    files.forEach((file: ProcessedFile) => {
+      // p: string は推論されるため削除
+      const parts = file.path.split('/').filter(p => p.length > 0);
+      let current: IntermediateFileNode = root; // currentの型をIntermediateFileNodeに指定
+
+      // partの型を string に指定 (推論も可能だが明示)
       parts.forEach((part: string, index: number) => {
+        // current.children が存在することを保証
+        if (!current.children) {
+          current.children = {};
+        }
+
         // 既に同名のノードがあるか確認
         if (!current.children[part]) {
           // なければ作成（最後ならファイル、それ以外はフォルダ）
@@ -47,49 +100,47 @@ export const useFileUploadTree = (
   };
 
   const processFiles = async (fileList: File[]) => {
-    const processedFiles: any[] = [];
+    // processedFiles: any[] -> ProcessedFile[] に変更
+    const processedFiles: ProcessedFile[] = [];
     let totalSize = 0;
     let fileCount = 0;
+
+    // JSZipは外部ライブラリであり、windowからアクセスするため as any を使用（外部型の管理に依存）
     const JSZip = (window as any).JSZip;
 
-    for (const file of fileList) {
+    for (const file of fileList as FileWithRelativePath[]) { // FileWithRelativePathにキャスト
       if (
         file.name.endsWith('.zip') ||
         file.type === 'application/zip' ||
         file.type === 'application/x-zip-compressed'
       ) {
         try {
+          // zip: any の型は JSZip のインスタンス
           const zip = await JSZip.loadAsync(file);
 
           // 【修正】Zipファイル名（拡張子なし）を取得してルートフォルダ名とする
           const zipRootName = file.name.replace(/\.[^/.]+$/, '');
 
-          // Zip内のファイルを列挙
+          // Zip内のファイルを列挙 (entries: any[])
           const entries = Object.keys(zip.files).map(name => zip.files[name]);
 
-          for (const zipEntry of entries) {
+          for (const zipEntry of entries) { // zipEntry: any の型は JSZipObject
             if (!zipEntry.dir) {
-              // 【修正】パスの先頭にZipファイル名を付与する
-              // これにより "64bit/..." ではなく "AssetsBundleExtractor.../64bit/..." となる
+              // ... (パスと名前の処理ロジック)
               const originalPath = zipEntry.name;
               const path = `${zipRootName}/${originalPath}`;
-
-              // ファイル名はパスの末尾
               const name = path.split('/').pop() || path;
 
-              // Calculate actual uncompressed size
               let size = 0;
               try {
-                // Note: JSZipのasync('blob')は遅延評価されるため、
-                // 大量ファイルの場合はここで待機すると時間がかかる可能性がありますが、
-                // 正確なサイズ取得のために必要です。
-                // パフォーマンスが問題になる場合は zipEntry._data.uncompressedSize などを参照する方法もあります（内部API依存）
+                // ... (サイズ計算ロジック)
                 const blob = await zipEntry.async('blob');
                 size = blob.size;
               } catch (e) {
                 console.warn('Failed to read zip entry size', e);
               }
 
+              // ProcessedFile 型を push
               processedFiles.push({
                 path: path,
                 name: name,
@@ -104,10 +155,10 @@ export const useFileUploadTree = (
           notify('error', 'Zip解凍エラー', `${file.name} を解凍できませんでした`);
         }
       } else {
-        // 通常ファイルの場合は webkitRelativePath (フォルダドロップ時) またはファイル名を使用
-        // フォルダドロップ時はブラウザが自動的にルートフォルダ名を含めてくれるのでそのままでOK
+        // 通常ファイルの場合
+        // ProcessedFile 型を push
         processedFiles.push({
-          path: file.webkitRelativePath || file.name,
+          path: file.webkitRelativePath || file.name, // FileWithRelativePathからアクセス
           name: file.name,
           size: file.size,
         });

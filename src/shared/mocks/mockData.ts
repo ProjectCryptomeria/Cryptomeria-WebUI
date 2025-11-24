@@ -157,6 +157,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 35000,
       downloadTimeMs: 10000,
       throughputBps: 23860929,
+      // Economic Metrics
+      gasUsed: 1250000,
+      baseFee: 0.00005,
+      actualFee: 62.5,
       logs: [
         '[System] Initializing baseline test...',
         '[Upload] Starting 1GB data generation.',
@@ -179,6 +183,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 10000,
       downloadTimeMs: 2000,
       throughputBps: 0,
+      // Economic Metrics (Failed case: partial fee)
+      gasUsed: 40000,
+      baseFee: 0.00006,
+      actualFee: 2.4,
       logs: [
         '[System] Initializing stress test...',
         '[Error] Connection timeout on datachain-3.',
@@ -200,6 +208,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 22000,
       downloadTimeMs: 10000,
       throughputBps: 33554432,
+      // Economic Metrics
+      gasUsed: 1100000,
+      baseFee: 0.00005,
+      actualFee: 55.0,
       logs: ['[System] Load Balance check start.', '[Info] All nodes active.', '[System] Done.'],
     },
   ];

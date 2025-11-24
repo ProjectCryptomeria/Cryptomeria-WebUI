@@ -7,7 +7,11 @@ import { z } from 'zod';
 
 // Schemas
 // 修正: ExperimentScenarioをインポートに追加
-import { EstimateRequestSchema, RunExperimentRequestSchema, ExperimentScenario } from '@/entities/scenario';
+import {
+  EstimateRequestSchema,
+  RunExperimentRequestSchema,
+  ExperimentScenario,
+} from '@/entities/scenario';
 import { FaucetRequestSchema } from '@/entities/account/model/schemas';
 import { ScaleRequestSchema } from '@/entities/deployment';
 import { ExperimentPreset } from '@/entities/preset';
@@ -47,7 +51,10 @@ export const handlers = [
     } catch (error) {
       // ZodErrorの場合は詳細を返す
       if (error instanceof z.ZodError) {
-        return HttpResponse.json({ error: 'Validation Error', details: error.issues }, { status: 400 });
+        return HttpResponse.json(
+          { error: 'Validation Error', details: error.issues },
+          { status: 400 }
+        );
       }
       return HttpResponse.json({ error: 'Invalid request', details: error }, { status: 400 });
     }
@@ -136,7 +143,6 @@ export const handlers = [
       const finalEstimatedCost = Math.max(1.0, estimatedCost);
 
       return HttpResponse.json({ cost: finalEstimatedCost, isBudgetSufficient: true });
-
     } catch (e) {
       if (e instanceof z.ZodError) {
         return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });

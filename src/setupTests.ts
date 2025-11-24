@@ -4,7 +4,7 @@
 // を使用可能にする
 import '@testing-library/jest-dom';
 
-// Note: 
+// Note:
 // MSW (Mock Service Worker) を使用した統合テストを行う際は、
 // ここにMSWのセットアップ/ティアダウンロジックを記述することを推奨します。
 // 例:

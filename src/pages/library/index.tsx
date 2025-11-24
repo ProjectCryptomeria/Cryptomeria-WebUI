@@ -14,6 +14,7 @@ import {
   FileJson,
   FileSpreadsheet,
   Library,
+  Coins, // Added for Economic Metrics icon
 } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 import { Modal, ModalHeader } from '@/shared/ui/Modal';
@@ -104,6 +105,10 @@ const LibraryLayer: React.FC = () => {
     allocator: 'アロケータ',
     dataSizeMB: 'データサイズ',
     throughputBps: 'スループット',
+    // Added new columns
+    actualFee: 'Fee (TKN)',
+    gasUsed: 'Gas Used',
+    baseFee: 'Base Fee',
   };
 
   // AllocatorとTransmitterのバッジ表示用コンポーネント (灰色バッジを使用)
@@ -289,6 +294,39 @@ const LibraryLayer: React.FC = () => {
                 </div>
               </section>
 
+              {/* Economic Metrics Section (NEW) */}
+              <section className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100">
+                <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Coins className="w-4 h-4" /> 経済コスト
+                </h4>
+                <div className="grid grid-cols-3 gap-4 text-center divide-x divide-amber-200/50">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">Fee (Total)</div>
+                    <div className="font-mono font-bold text-xl text-amber-600">
+                      {viewDetailResult.actualFee !== undefined
+                        ? `${viewDetailResult.actualFee.toLocaleString()} TKN`
+                        : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">Gas Used</div>
+                    <div className="font-mono font-bold text-xl text-slate-700">
+                      {viewDetailResult.gasUsed !== undefined
+                        ? viewDetailResult.gasUsed.toLocaleString()
+                        : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium">Base Fee</div>
+                    <div className="font-mono font-bold text-xl text-slate-700">
+                      {viewDetailResult.baseFee !== undefined
+                        ? viewDetailResult.baseFee.toFixed(5)
+                        : '-'}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               {/* Performance Section */}
               <section className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-100 shadow-inner">
                 <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -419,10 +457,13 @@ const LibraryLayer: React.FC = () => {
                   'allocator',
                   'dataSizeMB',
                   'throughputBps',
+                  'actualFee', // Added to sort/header
+                  'gasUsed', // Added to sort/header
+                  'baseFee', // Added to sort/header
                 ].map(k => (
                   <th
                     key={k}
-                    className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none whitespace-nowrap"
                     onClick={() => handleSort(k as keyof ExperimentResult)}
                   >
                     <div className="flex items-center gap-1">
@@ -469,6 +510,18 @@ const LibraryLayer: React.FC = () => {
                     {(r.throughputBps / 1024 / 1024).toFixed(2)}{' '}
                     <span className="text-[10px] text-slate-400 font-normal">Mbps</span>
                   </td>
+                  {/* New Columns */}
+                  <td className="px-6 py-3 font-mono text-amber-600 font-bold">
+                    {r.actualFee !== undefined ? r.actualFee.toFixed(1) : '-'}
+                    <span className="text-[10px] text-amber-400 font-normal ml-0.5">TKN</span>
+                  </td>
+                  <td className="px-6 py-3 font-mono text-slate-500">
+                    {r.gasUsed !== undefined ? r.gasUsed.toLocaleString() : '-'}
+                  </td>
+                  <td className="px-6 py-3 font-mono text-slate-500 text-xs">
+                    {r.baseFee !== undefined ? r.baseFee.toFixed(5) : '-'}
+                  </td>
+
                   <td className="px-6 py-3 text-right">
                     <Button
                       variant="ghost"

@@ -1,12 +1,12 @@
 import { StoreSlice } from '@/shared/store/types';
-import { NotificationItem } from '@/shared/types';
+import { Toast, NotificationItem } from '@/shared/types';
 
 export const createNotificationSlice: StoreSlice<{
-  toasts: any[];
-  notifications: any[];
+  toasts: Toast[];
+  notifications: NotificationItem[];
   isNotificationOpen: boolean;
   setIsNotificationOpen: (isOpen: boolean) => void;
-  addToast: (type: any, title: string, message: string) => void;
+  addToast: (type: Toast['type'], title: string, message: string) => void;
   clearNotifications: () => void;
   removeToast: (id: string) => void;
 }> = (set, get) => ({
@@ -22,7 +22,7 @@ export const createNotificationSlice: StoreSlice<{
   },
 
   addToast: (type, title, message) => {
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = Math.random().toString(36).substring(2, 9);
     const newNotification: NotificationItem = {
       id,
       type,

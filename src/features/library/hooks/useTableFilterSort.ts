@@ -27,21 +27,37 @@ export const useTableFilterSort = (data: ExperimentResult[], initialSort: SortCo
 
   const processedData = useMemo(() => {
     let processed = [...data];
+    const itemAccessor = (item: ExperimentResult, key: keyof ExperimentResult) => item[key];
+
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
       processed = processed.filter(item =>
-        Object.values(item as any).some(val => String(val).toLowerCase().includes(lowerTerm))
+        // item は ExperimentResult 型なので as any を削除し、Object.values() の値は val で文字列化
+        Object.values(item).some(val => String(val).toLowerCase().includes(lowerTerm))
       );
     }
     if (filters.length > 0) {
       processed = processed.filter(item =>
-        filters.every(cond => String((item as any)[cond.key]) === cond.value)
+        filters.every(cond => {
+          // cond.key (string) を keyof ExperimentResult にキャスト
+          const key = cond.key as keyof ExperimentResult;
+          // item[key] を型安全にアクセス
+          return String(itemAccessor(item, key)) === cond.value;
+        })
       );
     }
     processed.sort((a, b) => {
-      const av = (a as any)[sortConfig.key];
-      const bv = (b as any)[sortConfig.key];
+      // sortConfig.key (string) を keyof ExperimentResult にキャスト
+      const key = sortConfig.key as keyof ExperimentResult;
+
+      // ソート対象の値を型安全に取得
+      const av = itemAccessor(a, key);
+      const bv = itemAccessor(b, key);
+
+      // undefinedチェックは維持
       if (av === undefined || bv === undefined) return 0;
+
+      // ソートロジック
       return av < bv
         ? sortConfig.direction === 'asc'
           ? -1

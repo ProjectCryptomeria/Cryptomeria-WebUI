@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
     // ★ ADDED: Vitest Configuration
     test: {
       environment: 'jsdom', // DOM環境をシミュレート（Reactコンポーネントテストに必須）
-      globals: true,        // `describe`, `it`, `expect`などをグローバルに利用可能にする
+      globals: true, // `describe`, `it`, `expect`などをグローバルに利用可能にする
       setupFiles: './src/setupTests.ts', // テスト前のセットアップファイル
       // alias設定をViteのものと同期させる
       alias: {

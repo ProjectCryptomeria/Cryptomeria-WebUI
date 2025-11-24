@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import TopologyGraph from '@/features/monitoring/components/TopologyGraph';
-import type { NodeStatus, MonitoringUpdate } from '@/entities/node';
+import type { NodeStatus, MonitoringUpdate, MempoolInfo } from '@/entities/node';
 import { Activity, Zap, ChevronLeft, Monitor, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/Badge';
 import { PageHeader } from '@/shared/ui/PageHeader';
@@ -15,7 +15,7 @@ import { useGlobalStore } from '@/shared/store';
 const MonitoringLayer: React.FC = () => {
   const { setDeployedNodeCount } = useGlobalStore();
   const [nodes, setNodes] = useState<NodeStatus[]>([]);
-  const [mempoolData, setMempoolData] = useState<any[]>([]);
+  const [mempoolData, setMempoolData] = useState<MempoolInfo[]>([]);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
 
   // isTransitioning を追加で受け取る

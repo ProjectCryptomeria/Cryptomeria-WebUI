@@ -1,7 +1,7 @@
 import React from 'react';
 import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
 import { ExperimentPreset } from '@/entities/preset';
-import { FileText, Clock, Trash2, Database, Puzzle, Monitor, RotateCcw } from 'lucide-react';
+import { FileText, Clock, Trash2, Database, Puzzle, Monitor } from 'lucide-react';
 import { Badge } from '@/shared/ui/Badge';
 import { Card } from '@/shared/ui/Card';
 

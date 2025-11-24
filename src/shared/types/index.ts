@@ -38,5 +38,7 @@ export interface NotificationItem extends Toast {
   read: boolean;
 }
 
+
+
 // GlobalState型をエクスポート
 export * from './global-state';
