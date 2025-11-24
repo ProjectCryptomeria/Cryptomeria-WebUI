@@ -16,9 +16,9 @@ import type {
   ScenarioStatus,
   ExecutionResultDetails,
   UpdateScenarioParams,
-} from '../entities/scenario'; // 必要な型をインポート
+} from '../entities/scenario';
 import type { MonitoringUpdate } from '../entities/node';
-import type { ExperimentResult } from '../entities/result'; // 必要な型をインポート
+import type { ExperimentResult } from '../entities/result';
 import { useWebSocket } from '../shared/lib/hooks/useWebSocket';
 import { useGlobalStore } from '../shared/store';
 
@@ -35,35 +35,27 @@ interface ProgressMessage {
 const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
-  // ★ 修正: execution オブジェクトを分割して updateScenario, updateExecutionStatus を取得
-  const { setDeployedNodeCount, setBaseFeeInfo, loadData, execution } = useGlobalStore();
+  // setMinGasPrice を取得するように変更
+  const { setDeployedNodeCount, setMinGasPrice, loadData, execution } = useGlobalStore();
 
-  // WebSocketからBase Feeのモニタリングデータを受信
+  // WebSocketからモニタリングデータを受信
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
-    if (data.currentBaseFee !== undefined) {
-      setBaseFeeInfo({
-        current: data.currentBaseFee,
-        change: data.baseFeeChangeRatio || 0,
-        next: data.nextBaseFee || data.currentBaseFee,
-        average: data.averageBaseFee || data.currentBaseFee,
-      });
+    if (data.minGasPrice !== undefined) {
+      setMinGasPrice(data.minGasPrice);
     }
     setDeployedNodeCount(data.deployedCount);
   });
 
-  // ★ 追加: 実験進捗WebSocketリスナー
+  // 実験進捗WebSocketリスナー
   useWebSocket<ProgressMessage>('/ws/experiment/progress', data => {
     const { scenarioId, type, status, log, resultDetails } = data;
 
     if (type === 'ALL_COMPLETE') {
       execution.updateExecutionStatus(false);
-      // addToast は updateScenario 内で呼ばれるため、ここでは不要
       return;
     }
 
     if (scenarioId !== undefined) {
-      // uniqueId を使用してシナリオを特定する必要がある
-      // MockServer.ts の実装に基づき、ここでは scenarioId (number) から uniqueId を見つける
       const scenario = execution.scenarios.find(s => s.id === scenarioId);
       if (!scenario) return;
 
@@ -74,10 +66,8 @@ const App: React.FC = () => {
       const isComplete = status === 'COMPLETE' || status === 'FAIL';
 
       if (isComplete) {
-        // 完了時に必要な詳細データを渡す
         execution.updateScenario(scenario.uniqueId, { status, log, resultDetails }, true);
       } else if (status || log) {
-        // 実行中またはログの追加
         execution.updateScenario(scenario.uniqueId, updates);
       }
     }

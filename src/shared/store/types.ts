@@ -25,15 +25,10 @@ export interface NotificationSlice {
 export interface NodeSlice {
   deployedNodeCount: number;
   isDockerBuilt: boolean;
-  baseFeeInfo: {
-    current: number;
-    change: number;
-    next: number;
-    average: number;
-  } | null;
+  minGasPrice: number | null; // 変更
   setDeployedNodeCount: (count: number) => void;
   setIsDockerBuilt: (built: boolean) => void;
-  setBaseFeeInfo: (info: NodeSlice['baseFeeInfo']) => void;
+  setMinGasPrice: (price: number) => void; // 変更
 }
 
 export interface EconomySlice {

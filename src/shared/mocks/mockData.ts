@@ -9,24 +9,24 @@ import type { UserAccount, SystemAccount } from '@/entities/account';
  * バックエンドAPIが存在しないため、フロントエンドのみで動作確認可能なダミーデータを生成します。
  */
 
-// --- Fee Calculation Constants ---
+// --- Fee Calculation Constants (Cosmos Model) ---
 // TKN単位とする。
-export const BASE_GAS_PRICE = 0.00005; // 1 Gasあたりの基本価格 (TKN/Gas)
-export const PRIORITY_FEE = 0.0002; // 1 Gasあたりの優先手数料 (TKN/Gas)
+export const MIN_GAS_PRICE = 0.00005; // 1 Gasあたりの最低価格 (TKN/Gas) - 静的
+export const FEE_MULTIPLIER = 1.5; // 推奨手数料倍率 (Estimate時に使用)
 export const GAS_USED_PER_MB = 1000; // 1MBあたりに消費されるガス量 (Gas/MB)
 
 /**
  * Fee計算に必要な定数をエクスポートします。
  */
 export interface FeeConstants {
-  baseGasPrice: number;
-  priorityFee: number;
+  minGasPrice: number;
+  feeMultiplier: number;
   gasUsedPerMB: number;
 }
 
 export const getFeeConstants = (): FeeConstants => ({
-  baseGasPrice: BASE_GAS_PRICE,
-  priorityFee: PRIORITY_FEE,
+  minGasPrice: MIN_GAS_PRICE,
+  feeMultiplier: FEE_MULTIPLIER,
   gasUsedPerMB: GAS_USED_PER_MB,
 });
 
@@ -66,7 +66,6 @@ export const generateMockUsers = (): UserAccount[] => [
 ];
 
 // 経済画面用: システムアカウント生成
-// Faucetの原資となるMillionaireアカウントと、各チェーンのRelayerアカウントを生成します。
 export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] => {
   const accounts: SystemAccount[] = [
     {
@@ -79,10 +78,10 @@ export const generateSystemAccounts = (dataChainCount: number): SystemAccount[] 
   ];
   for (let i = 0; i < dataChainCount; i++) {
     accounts.push({
-      id: `sys - relayer - ${i} `,
-      name: `Relayer(Chain - ${i})`,
-      address: `raid1_relayer_ch${i} _addr`,
-      balance: 50, // 初期残高は少なめに設定（Watchdogの動作確認用）
+      id: `sys-relayer-${i}`,
+      name: `Relayer(Chain-${i})`,
+      address: `raid1_relayer_ch${i}_addr`,
+      balance: 50,
       type: 'relayer',
     });
   }
@@ -157,10 +156,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 35000,
       downloadTimeMs: 10000,
       throughputBps: 23860929,
-      // Economic Metrics
+      // Economic Metrics (Cosmos Model)
       gasUsed: 1250000,
-      baseFee: 0.00005,
-      actualFee: 62.5,
+      baseFee: 0.00005, // Min Gas Price
+      actualFee: 62.5, // 1250000 * 0.00005
       logs: [
         '[System] Initializing baseline test...',
         '[Upload] Starting 1GB data generation.',
@@ -183,10 +182,10 @@ export const generateMockResults = (): ExperimentResult[] => {
       uploadTimeMs: 10000,
       downloadTimeMs: 2000,
       throughputBps: 0,
-      // Economic Metrics (Failed case: partial fee)
+      // Economic Metrics
       gasUsed: 40000,
-      baseFee: 0.00006,
-      actualFee: 2.4,
+      baseFee: 0.00005, // Min Gas Price
+      actualFee: 2.0,
       logs: [
         '[System] Initializing stress test...',
         '[Error] Connection timeout on datachain-3.',
@@ -210,7 +209,7 @@ export const generateMockResults = (): ExperimentResult[] => {
       throughputBps: 33554432,
       // Economic Metrics
       gasUsed: 1100000,
-      baseFee: 0.00005,
+      baseFee: 0.00005, // Min Gas Price
       actualFee: 55.0,
       logs: ['[System] Load Balance check start.', '[Info] All nodes active.', '[System] Done.'],
     },

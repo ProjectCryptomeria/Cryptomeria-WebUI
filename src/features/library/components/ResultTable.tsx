@@ -40,7 +40,7 @@ const SortIcon = ({
     <ChevronDown className="w-3 h-3 ml-1" />
   );
 
-// カラム定義
+// カラム定義 (変更)
 const columnLabels: { [key: string]: string } = {
   executedAt: '実行日時',
   scenarioName: 'シナリオ名',
@@ -50,7 +50,7 @@ const columnLabels: { [key: string]: string } = {
   throughputBps: 'スループット',
   actualFee: 'Fee (TKN)',
   gasUsed: 'Gas Used',
-  baseFee: 'Base Fee',
+  baseFee: 'Min Gas Price', // 変更
 };
 
 export const ResultTable: React.FC<ResultTableProps> = ({
@@ -140,6 +140,7 @@ export const ResultTable: React.FC<ResultTableProps> = ({
                   {r.gasUsed !== undefined ? r.gasUsed.toLocaleString() : '-'}
                 </td>
                 <td className="px-6 py-3 font-mono text-slate-500 text-xs">
+                  {/* toFixed(7) に変更 */}
                   {r.baseFee !== undefined ? r.baseFee.toFixed(7) : '-'}
                 </td>
 

@@ -6,7 +6,6 @@ import { getFeeConstants } from './mockData';
 import { z } from 'zod';
 
 // Schemas
-// 修正: ExperimentScenarioをインポートに追加
 import {
   EstimateRequestSchema,
   RunExperimentRequestSchema,
@@ -27,8 +26,6 @@ type ParamsOnlyContext = {
 
 /**
  * MSW Handlers
- * * すべてのHTTPリクエストをインターセプトし、MockServerにルーティングします。
- * 遅延の制御、エラーハンドリング、レスポンス形式の統一を行います。
  */
 export const handlers = [
   // --- Deployment Layer ---
@@ -43,13 +40,11 @@ export const handlers = [
 
     try {
       const body = await request.json();
-      // Zodバリデーション
       const { replicaCount } = ScaleRequestSchema.parse(body);
 
       await MockServer.scaleCluster(replicaCount);
       return HttpResponse.json({ status: 'accepted' }, { status: 202 });
     } catch (error) {
-      // ZodErrorの場合は詳細を返す
       if (error instanceof z.ZodError) {
         return HttpResponse.json(
           { error: 'Validation Error', details: error.issues },
@@ -96,17 +91,14 @@ export const handlers = [
 
     try {
       const body = await request.json();
-      // Zodバリデーション
       const { targetId, amount } = FaucetRequestSchema.parse(body);
 
       const result = await MockServer.faucet(targetId, amount);
       return HttpResponse.json(result);
     } catch (e) {
       if (e instanceof z.ZodError) {
-        // 修正: e.errors -> e.issues
         return HttpResponse.json({ error: 'Validation Error', details: e.issues }, { status: 400 });
       }
-      // eがErrorオブジェクトであることをチェック
       if (e instanceof Error) {
         return HttpResponse.json({ error: e.message }, { status: 400 });
       }
@@ -120,13 +112,12 @@ export const handlers = [
 
     try {
       const body = await request.json();
-      // Zodバリデーション
       const config = EstimateRequestSchema.parse(body);
 
-      const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
+      // 定数を取得 (Cosmos Model: Min Gas Price, Fee Multiplier)
+      const { minGasPrice, feeMultiplier, gasUsedPerMB } = getFeeConstants();
 
       let sizeMB = 0;
-      // Union型の処理
       if ('dataSize' in config) {
         sizeMB = config.dataSize;
       } else if ('virtualConfig' in config && config.virtualConfig) {
@@ -135,11 +126,12 @@ export const handlers = [
         sizeMB = config.realConfig.totalSizeMB;
       }
 
+      // 見積もり計算: Gas * MinGasPrice * Multiplier
       const gasUsed = sizeMB * gasUsedPerMB;
-      const fluctuation = 1 + (Math.random() * 0.25 - 0.125);
-      const currentBaseFee = baseGasPrice * fluctuation;
-      const totalFee = gasUsed * (currentBaseFee + priorityFee);
-      const estimatedCost = parseFloat((totalFee * 1.5).toFixed(2));
+      const requiredFee = gasUsed * minGasPrice;
+      const estimatedCost = parseFloat((requiredFee * feeMultiplier).toFixed(2));
+
+      // 最低1.0 TKN (表示のため)
       const finalEstimatedCost = Math.max(1.0, estimatedCost);
 
       return HttpResponse.json({ cost: finalEstimatedCost, isBudgetSufficient: true });
@@ -157,11 +149,8 @@ export const handlers = [
 
     try {
       const body = await request.json();
-      // Zodバリデーション
       const { scenarios } = RunExperimentRequestSchema.parse(body);
 
-      // 修正: Zodの出力型とMockServerの必要とするExperimentScenario型との不一致を、
-      // unknownを介して型アサーションを行うことで解消します。(TS2352/TS2345の解消)
       const result = await MockServer.runExperiment(scenarios as unknown as ExperimentScenario[]);
       return HttpResponse.json(result, { status: 202 });
     } catch (e) {
@@ -200,7 +189,6 @@ export const handlers = [
 
   http.post('/api/presets', async ({ request }: RequestOnlyContext) => {
     await delay(300);
-    // Presetのバリデーションは構造が複雑なため今回はスキップ
     const preset = (await request.json()) as ExperimentPreset;
     const saved = await MockServer.savePreset(preset);
     return HttpResponse.json(saved);

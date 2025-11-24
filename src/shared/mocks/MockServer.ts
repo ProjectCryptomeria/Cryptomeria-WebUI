@@ -76,12 +76,8 @@ class MockServerInstance {
   private results: ExperimentResult[] = [];
   private presets: ExperimentPreset[] = [];
 
-  // Base Feeの状態を保持
-  private currentBaseFee: number = getFeeConstants().baseGasPrice;
-  private baseFeeChangeRatio: number = 0;
-  private baseFeeHistory: number[] = []; // 直近のBase Fee履歴
-  private nextBaseFee: number = this.currentBaseFee;
-  private averageBaseFee: number = this.currentBaseFee;
+  // Feeの状態を保持 (静的値)
+  private minGasPrice: number = getFeeConstants().minGasPrice;
 
   private intervals: NodeJS.Timeout[] = [];
   private subscribers: { [url: string]: ((data: unknown) => void)[] } = {};
@@ -101,8 +97,6 @@ class MockServerInstance {
       name: `data-${i}`,
       txs: Math.floor(Math.random() * 50),
     }));
-    // 初期履歴の生成
-    this.baseFeeHistory = Array(10).fill(this.currentBaseFee);
   }
 
   // --- Event Loop (Heartbeat) ---
@@ -111,15 +105,12 @@ class MockServerInstance {
     this.intervals.push(
       setInterval(() => {
         this.updateNodes();
-        // Base Fee 情報をブロードキャストに追加
+        // Fee 情報をブロードキャストに追加 (静的)
         this.broadcast('/ws/monitoring', {
           nodes: this.nodes,
           mempool: this.mempool,
           deployedCount: this.deployedNodeCount,
-          currentBaseFee: this.currentBaseFee,
-          baseFeeChangeRatio: this.baseFeeChangeRatio,
-          nextBaseFee: this.nextBaseFee,
-          averageBaseFee: this.averageBaseFee,
+          minGasPrice: this.minGasPrice,
         } as MonitoringUpdate);
       }, 1000)
     );
@@ -165,37 +156,7 @@ class MockServerInstance {
       txs: Math.max(0, m.txs + (Math.random() > 0.5 ? 5 : -10) + Math.floor(Math.random() * 5)),
     }));
 
-    // 1. 現在のBase Feeを履歴に追加 (最大10件)
-    this.baseFeeHistory.push(this.currentBaseFee);
-    if (this.baseFeeHistory.length > 10) {
-      this.baseFeeHistory.shift();
-    }
-
-    // --- 【修正】丸め処理を削除し、正確な値を保持 ---
-    const BASE_FEE_CONST = getFeeConstants().baseGasPrice; // 0.00005
-    const MIN_BASE_FEE = BASE_FEE_CONST * 0.2; // 0.00001 (最低値保証)
-
-    // 2. 直近10件の平均値を計算 (toFixedを削除)
-    const sum = this.baseFeeHistory.reduce((acc, val) => acc + val, 0);
-    this.averageBaseFee = sum / this.baseFeeHistory.length;
-
-    // 3. Base Feeのランダム変動 (±12.5%の変動率に基づいて更新)
-    const oldBaseFee = this.currentBaseFee;
-    const fluctuation = Math.random() * 0.25 - 0.125; // -12.5% から +12.5%
-
-    // 最低値保証を適用
-    const calculatedNext = Math.max(MIN_BASE_FEE, oldBaseFee * (1 + fluctuation));
-
-    // Currentを更新 (丸めを削除)
-    this.currentBaseFee = calculatedNext;
-
-    // 変動率の計算のみ parseFloat/toFixed(1) を残す（変動率の表示精度のため）
-    this.baseFeeChangeRatio = parseFloat(((calculatedNext / oldBaseFee - 1) * 100).toFixed(1));
-
-    // Next(さらに次の予測)は、現在のトレンドを少し反映させて計算 (丸めを削除)
-    const nextFluctuation = Math.random() * 0.1 - 0.05;
-    this.nextBaseFee = Math.max(MIN_BASE_FEE, this.currentBaseFee * (1 + nextFluctuation));
-    // --- 修正終わり ---
+    // EIP-1559の動的変動ロジックは削除済み (Cosmosモデル準拠)
   }
 
   // --- Pub/Sub System ---
@@ -210,10 +171,7 @@ class MockServerInstance {
         nodes: this.nodes,
         mempool: this.mempool,
         deployedCount: this.deployedNodeCount,
-        currentBaseFee: this.currentBaseFee,
-        baseFeeChangeRatio: this.baseFeeChangeRatio,
-        nextBaseFee: this.nextBaseFee,
-        averageBaseFee: this.averageBaseFee,
+        minGasPrice: this.minGasPrice,
       });
     }
 
@@ -326,7 +284,7 @@ class MockServerInstance {
    * 順番に実行し、資金の引き落としと返金を行う
    */
   private async startExperimentSimulation(executionId: string, scenarios: ExperimentScenario[]) {
-    const { baseGasPrice, priorityFee, gasUsedPerMB } = getFeeConstants();
+    const { minGasPrice, gasUsedPerMB } = getFeeConstants();
 
     for (const scenario of scenarios) {
       // 準備完了以外のステータスはスキップ
@@ -362,25 +320,22 @@ class MockServerInstance {
       // 実際のGas Usedを計算 (データサイズベース)
       const actualGasUsed = scenario.dataSize * gasUsedPerMB;
 
-      // Base Feeの変動をシミュレート（実行時にも再度変動する）
-      const fluctuation = 1 + (Math.random() * 0.25 - 0.125); // -12.5% から +12.5%
-      const currentBaseFee = baseGasPrice * fluctuation;
-
-      // 実際の Total Fee を計算: Gas Used × (Base Fee + Priority Fee)
-      let actualTotalFee = actualGasUsed * (currentBaseFee + priorityFee);
+      // 実際の Fee: Gas Used × Min Gas Price (Cosmos Model - 静的)
+      const actualFeeRaw = actualGasUsed * minGasPrice;
 
       // 成功/失敗のランダム判定
       const success = Math.random() > 0.15;
       const status = success ? 'COMPLETE' : 'FAIL';
       let log = '';
 
-      // 失敗時は、Total Feeはガス代の10%程度に留める（失敗時の処理コストを表現）
+      // 失敗時は、Gasの一部だけ消費されたとする
+      let finalFee = actualFeeRaw;
       if (!success) {
-        actualTotalFee = actualTotalFee * (0.08 + Math.random() * 0.04); // 8%から12%の範囲で乗算
+        finalFee = actualFeeRaw * (0.08 + Math.random() * 0.04); // 8-12%
       }
 
-      // 実際にかかったコスト（TKN）。最低コスト1.0 TKNを保証
-      const actualCost = parseFloat(Math.max(1.0, actualTotalFee).toFixed(2));
+      // 最低コスト1.0 TKNを保証 (表示上の都合)
+      const actualCost = parseFloat(Math.max(1.0, finalFee).toFixed(2));
 
       const refund = parseFloat((scenario.cost - actualCost).toFixed(2));
 
@@ -388,7 +343,7 @@ class MockServerInstance {
         user.balance += refund;
       }
 
-      // 結果オブジェクトの作成 (Fee情報を含める)
+      // 結果オブジェクトの作成
       let resultData: ExperimentResult | undefined = undefined;
 
       if (success) {
@@ -397,7 +352,7 @@ class MockServerInstance {
           id: `res-${scenario.uniqueId}`,
           scenarioName: `Batch Execution #${scenario.id}`,
           executedAt: new Date().toISOString(),
-          status: 'SUCCESS', // ライブラリ側のステータス定義
+          status: 'SUCCESS',
           dataSizeMB: scenario.dataSize,
           chunkSizeKB: scenario.chunkSize,
           totalTxCount: Math.floor((scenario.dataSize * 1024) / scenario.chunkSize),
@@ -408,9 +363,9 @@ class MockServerInstance {
           uploadTimeMs: 1234 + Math.random() * 5000,
           downloadTimeMs: 567 + Math.random() * 2000,
           throughputBps: Math.floor(10000000 + Math.random() * 5000000),
-          // Economic Metrics (追加)
+          // Economic Metrics
           gasUsed: actualGasUsed,
-          baseFee: currentBaseFee,
+          baseFee: minGasPrice, // Min Gas Price
           actualFee: actualCost,
           logs: scenario.logs,
         };

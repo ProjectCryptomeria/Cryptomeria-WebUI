@@ -20,9 +20,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onLogClick,
 }) => {
   // ★ 修正: removeToast も取得する
-  const { toasts, execution, baseFeeInfo, removeToast } = useGlobalStore();
-
-  const isExecutionRunning = execution.isExecutionRunning;
+  const { toasts, removeToast } = useGlobalStore();
 
   return (
     // レイアウト変更: flex-row -> flex-col (ヘッダーを上にするため)

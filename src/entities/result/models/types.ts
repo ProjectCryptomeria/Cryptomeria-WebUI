@@ -19,7 +19,7 @@ export interface ExperimentResult {
   throughputBps: number;
   // Economic Metrics
   gasUsed?: number; // 消費ガス量 (Gas)
-  baseFee?: number; // 実行時のBaseFee (TKN/Gas)
+  baseFee?: number; // 実行時の Min Gas Price (TKN/Gas) ※名称は互換性のため維持
   actualFee?: number; // 実際にかかったコスト (TKN)
   logs?: string[];
 }

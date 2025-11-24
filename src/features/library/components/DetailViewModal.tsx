@@ -101,9 +101,10 @@ export const DetailViewModal: React.FC<DetailViewModalProps> = ({ result, onClos
                       </div>
                     </div>
                     <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 text-center">
-                      <div className="text-xs text-slate-500 mb-1 font-medium">Base Fee</div>
+                      <div className="text-xs text-slate-500 mb-1 font-medium">Min Gas Price</div>
                       <div className="font-mono font-bold text-lg text-slate-700">
-                        {result.baseFee !== undefined ? result.baseFee.toFixed(5) : '-'}
+                        {/* toFixed(7) に変更 */}
+                        {result.baseFee !== undefined ? result.baseFee.toFixed(7) : '-'}
                       </div>
                     </div>
                   </div>
