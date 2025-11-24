@@ -133,14 +133,14 @@ export const ResultTable: React.FC<ResultTableProps> = ({
                 </td>
                 {/* New Columns */}
                 <td className="px-6 py-3 font-mono text-amber-600 font-bold">
-                  {r.actualFee !== undefined ? r.actualFee.toFixed(1) : '-'}
+                  {r.actualFee !== undefined ? r.actualFee.toFixed(3) : '-'}
                   <span className="text-[10px] text-amber-400 font-normal ml-0.5">TKN</span>
                 </td>
                 <td className="px-6 py-3 font-mono text-slate-500">
                   {r.gasUsed !== undefined ? r.gasUsed.toLocaleString() : '-'}
                 </td>
                 <td className="px-6 py-3 font-mono text-slate-500 text-xs">
-                  {r.baseFee !== undefined ? r.baseFee.toFixed(5) : '-'}
+                  {r.baseFee !== undefined ? r.baseFee.toFixed(7) : '-'}
                 </td>
 
                 <td className="px-6 py-3 text-right">

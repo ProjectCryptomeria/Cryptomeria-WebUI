@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer })
                   </div>
                   <div className="flex items-center justify-between">
                     <span className={`font-bold text-lg ${changeColor}`}>
-                      {baseFeeInfo.current.toFixed(3)}
+                      {baseFeeInfo.current.toFixed(7)}
                     </span>
                     <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded-lg">
                       <ChangeIcon className={`w-3 h-3 ${changeColor}`} />
@@ -102,14 +102,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer })
                 <div className="bg-slate-800/50 rounded-xl p-2.5 border border-slate-700/50">
                   <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Next</div>
                   <div className="font-mono font-bold text-slate-300 text-sm">
-                    {baseFeeInfo.next.toFixed(3)}
+                    {baseFeeInfo.next.toFixed(7)}
                   </div>
                 </div>
                 {/* Average */}
                 <div className="bg-slate-800/50 rounded-xl p-2.5 border border-slate-700/50">
                   <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Avg (10)</div>
                   <div className="font-mono font-bold text-blue-300 text-sm">
-                    {baseFeeInfo.average.toFixed(3)}
+                    {baseFeeInfo.average.toFixed(7)}
                   </div>
                 </div>
               </div>

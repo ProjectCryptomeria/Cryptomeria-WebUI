@@ -171,26 +171,31 @@ class MockServerInstance {
       this.baseFeeHistory.shift();
     }
 
-    // 2. 直近10件の平均値を計算
+    // --- 【修正】丸め処理を削除し、正確な値を保持 ---
+    const BASE_FEE_CONST = getFeeConstants().baseGasPrice; // 0.00005
+    const MIN_BASE_FEE = BASE_FEE_CONST * 0.2; // 0.00001 (最低値保証)
+
+    // 2. 直近10件の平均値を計算 (toFixedを削除)
     const sum = this.baseFeeHistory.reduce((acc, val) => acc + val, 0);
-    this.averageBaseFee = parseFloat((sum / this.baseFeeHistory.length).toFixed(3));
+    this.averageBaseFee = sum / this.baseFeeHistory.length;
 
     // 3. Base Feeのランダム変動 (±12.5%の変動率に基づいて更新)
-    // ここで算出する値が「次のブロック(Next)」の値となるシミュレーション
-    // 現実的にはブロック生成ごとにCurrentが更新されるが、ここではTickごとに未来を予測生成して更新する流れ
     const oldBaseFee = this.currentBaseFee;
     const fluctuation = Math.random() * 0.25 - 0.125; // -12.5% から +12.5%
-    const calculatedNext = Math.max(0.01, oldBaseFee * (1 + fluctuation)); // 最低値 0.01 を保証
 
-    // Currentを更新
-    this.currentBaseFee = parseFloat(calculatedNext.toFixed(3));
+    // 最低値保証を適用
+    const calculatedNext = Math.max(MIN_BASE_FEE, oldBaseFee * (1 + fluctuation));
+
+    // Currentを更新 (丸めを削除)
+    this.currentBaseFee = calculatedNext;
+
+    // 変動率の計算のみ parseFloat/toFixed(1) を残す（変動率の表示精度のため）
     this.baseFeeChangeRatio = parseFloat(((calculatedNext / oldBaseFee - 1) * 100).toFixed(1));
 
-    // Next(さらに次の予測)は、現在のトレンドを少し反映させて計算
+    // Next(さらに次の予測)は、現在のトレンドを少し反映させて計算 (丸めを削除)
     const nextFluctuation = Math.random() * 0.1 - 0.05;
-    this.nextBaseFee = parseFloat(
-      Math.max(0.01, this.currentBaseFee * (1 + nextFluctuation)).toFixed(3)
-    );
+    this.nextBaseFee = Math.max(MIN_BASE_FEE, this.currentBaseFee * (1 + nextFluctuation));
+    // --- 修正終わり ---
   }
 
   // --- Pub/Sub System ---
