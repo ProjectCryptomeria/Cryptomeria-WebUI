@@ -94,7 +94,7 @@ const BlockBar: React.FC<{ block: BlockEvent; onClick: (block: BlockEvent) => vo
 
 /**
  * 単一チェーンのレーン全体
- * 【FIXED: Overall contrast increased (text, borders, backgrounds)】
+ * 【FIXED: Layout and Contrast Adjustments】
  */
 const ChainLane: React.FC<{
   chainName: string;
@@ -206,7 +206,7 @@ const ChainLane: React.FC<{
             style={{ bottom: '106px' }}
           ></div>
           <span
-            className="absolute left-2 text-[10px] font-bold font-mono text-slate-600 bg-white px-1.5 rounded border border-slate-200"
+            className="absolute left-2 text-[10px] font-bold font-mono text-slate-600 bg-white/80 px-1.5 rounded border border-slate-200"
             style={{ bottom: '106px', transform: 'translateY(50%)' }}
           >
             10 MB
@@ -218,7 +218,7 @@ const ChainLane: React.FC<{
             style={{ bottom: '61px' }}
           ></div>
           <span
-            className="absolute left-2 text-[10px] font-bold font-mono text-slate-500 bg-white px-1.5 rounded border border-slate-200"
+            className="absolute left-2 text-[10px] font-bold font-mono text-slate-500 bg-white/80 px-1.5 rounded border border-slate-200"
             style={{ bottom: '61px', transform: 'translateY(50%)' }}
           >
             5 MB
@@ -232,15 +232,17 @@ const ChainLane: React.FC<{
         </div>
 
         {/* 2. スクロール可能なバーエリア */}
-        {/* [MODIFIED] pl-12を追加し、開始位置を右にずらして補助数値との重なりを防ぐ */}
         <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-4 custom-scrollbar z-10">
-          <div className="flex items-end h-full justify-start pl-12 pr-8">
+          <div
+            // [MODIFIED] pl-16に変更し、補助数値ラベルとの重なりを解消 (pl-12 -> pl-16)
+            className="flex items-end h-full justify-start pl-16 pr-8"
+          >
             {displayHistory.map(block => (
               <BlockBar key={block.height} block={block} onClick={openTxModal} />
             ))}
 
-            {/* [MODIFIED] CURRENT HEADラインをコンテナ内に移動し、最新バーの右に追随させる */}
-            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-4 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
+            {/* [MODIFIED] CURRENT HEADラインの右マージンを減らし、最新のバーに追随するように調整 (mr-4 -> mr-1) */}
+            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-1 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
               <div className="absolute bottom-0 -left-1 text-[9px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
                 CURRENT HEAD
               </div>
