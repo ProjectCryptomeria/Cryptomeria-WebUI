@@ -1,36 +1,23 @@
 import React, { useState } from 'react';
 import { ExperimentResult } from '@/entities/result';
-import {
-  Download,
-  Filter,
-  Search,
-  FileText,
-  Clock,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  Copy,
-  FileJson,
-  FileSpreadsheet,
-  Library,
-  Coins, // Added for Economic Metrics icon
-} from 'lucide-react';
-import { Card } from '@/shared/ui/Card';
+import { Download, Trash2, Copy, FileJson, FileSpreadsheet, Library } from 'lucide-react';
 import { Modal, ModalHeader } from '@/shared/ui/Modal';
-import { Badge, StatusBadge } from '@/shared/ui/Badge';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { TableStyles } from '@/shared/ui/Table';
 import { useTableFilterSort } from '@/features/library/hooks/useTableFilterSort';
 import { useGlobalStore } from '@/shared/store';
+
+// 切り出したコンポーネントのインポート
+import { ResultToolbar } from '@/features/library/components/ResultToolbar';
+import { ResultTable } from '@/features/library/components/ResultTable';
+import { DetailViewModal } from '@/features/library/components/DetailViewModal';
 
 /**
  * Library Layer
  *
  * 過去の実験結果をリスト表示し、検索・フィルタリング・エクスポートを行う画面。
- * データ量が増えても管理しやすいよう、テーブルのソート機能や検索バーを充実させています。
+ * 3つのコンポーネント（Toolbar, Table, DetailModal）に分割されています。
  */
 const LibraryLayer: React.FC = () => {
   const { results, deleteResult } = useGlobalStore();
@@ -52,7 +39,6 @@ const LibraryLayer: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
   const [exportFilename, setExportFilename] = useState('');
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -87,39 +73,6 @@ const LibraryLayer: React.FC = () => {
       .join(',');
     return `${headers}\n${values}`;
   };
-
-  const SortIcon = ({ columnKey }: { columnKey: keyof ExperimentResult }) =>
-    sortConfig.key !== columnKey ? (
-      <span className="w-3 h-3 opacity-0 ml-1">↕</span>
-    ) : sortConfig.direction === 'asc' ? (
-      <ChevronUp className="w-3 h-3 ml-1" />
-    ) : (
-      <ChevronDown className="w-3 h-3 ml-1" />
-    );
-
-  // カラム名表示マッピング
-  const columnLabels: { [key: string]: string } = {
-    executedAt: '実行日時',
-    scenarioName: 'シナリオ名',
-    status: 'ステータス',
-    allocator: 'アロケータ',
-    dataSizeMB: 'データサイズ',
-    throughputBps: 'スループット',
-    // Added new columns
-    actualFee: 'Fee (TKN)',
-    gasUsed: 'Gas Used',
-    baseFee: 'Base Fee',
-  };
-
-  // AllocatorとTransmitterのバッジ表示用コンポーネント (灰色バッジを使用)
-  const StrategyBadge = ({ value }: { value: string }) => (
-    <Badge
-      color="slate"
-      className="font-mono bg-slate-100 text-slate-700 border-slate-200 justify-center w-20 text-center px-1 py-1"
-    >
-      {value}
-    </Badge>
-  );
 
   return (
     <div className="space-y-6 pb-20 h-full flex flex-col">
@@ -233,314 +186,30 @@ const LibraryLayer: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Detail Modal */}
-      <Modal
-        isOpen={!!viewDetailResult}
-        onClose={() => setViewDetailResult(null)}
-        className="max-w-2xl w-full p-0 overflow-hidden"
-      >
-        {viewDetailResult && (
-          <div className="flex flex-col max-h-[90vh]">
-            <ModalHeader
-              title={viewDetailResult.scenarioName}
-              subTitle={`ID: ${viewDetailResult.id}`}
-              icon={FileText}
-              iconColor="text-blue-500"
-              onClose={() => setViewDetailResult(null)}
-            />
+      {/* Detail View Modal */}
+      <DetailViewModal result={viewDetailResult} onClose={() => setViewDetailResult(null)} />
 
-            <div className="p-6 overflow-y-auto custom-scrollbar space-y-8 bg-white">
-              {/* Basic Info Section */}
-              <section>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 mb-4">
-                  基本情報
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">実行日時</div>
-                    <div className="font-mono text-sm font-bold text-slate-700">
-                      {new Date(viewDetailResult.executedAt).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">
-                      結果ステータス
-                    </div>
-                    <StatusBadge status={viewDetailResult.status} />
-                  </div>
-                </div>
-              </section>
+      {/* Main Toolbar */}
+      <ResultToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={filters}
+        onAddFilter={addFilter}
+        onRemoveFilter={removeFilter}
+        selectedResultId={selectedResultId}
+        onDeleteClick={handleDeleteClick}
+        onExportClick={handleOpenExport}
+      />
 
-              {/* Settings Section */}
-              <section>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 mb-4">
-                  実行パラメータ
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { l: 'データサイズ', v: `${viewDetailResult.dataSizeMB} MB` },
-                    { l: 'チャンクサイズ', v: `${viewDetailResult.chunkSizeKB} KB` },
-                    { l: 'アロケータ', v: viewDetailResult.allocator },
-                    { l: 'トランスミッタ', v: viewDetailResult.transmitter },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center p-3 border-b border-slate-50"
-                    >
-                      <span className="text-sm text-slate-500 font-medium">{item.l}</span>
-                      <span className="font-bold text-slate-700">{item.v}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Economic Metrics Section (NEW) */}
-              <section className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100">
-                <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Coins className="w-4 h-4" /> 経済コスト
-                </h4>
-                <div className="grid grid-cols-3 gap-4 text-center divide-x divide-amber-200/50">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Fee (Total)</div>
-                    <div className="font-mono font-bold text-xl text-amber-600">
-                      {viewDetailResult.actualFee !== undefined
-                        ? `${viewDetailResult.actualFee.toLocaleString()} TKN`
-                        : '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Gas Used</div>
-                    <div className="font-mono font-bold text-xl text-slate-700">
-                      {viewDetailResult.gasUsed !== undefined
-                        ? viewDetailResult.gasUsed.toLocaleString()
-                        : '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">Base Fee</div>
-                    <div className="font-mono font-bold text-xl text-slate-700">
-                      {viewDetailResult.baseFee !== undefined
-                        ? viewDetailResult.baseFee.toFixed(5)
-                        : '-'}
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Performance Section */}
-              <section className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-100 shadow-inner">
-                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> パフォーマンスメトリクス
-                </h4>
-                <div className="grid grid-cols-3 gap-4 text-center divide-x divide-blue-200/50">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">アップロード時間</div>
-                    <div className="font-mono font-bold text-xl text-slate-800">
-                      {(viewDetailResult.uploadTimeMs / 1000).toFixed(2)}s
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">ダウンロード時間</div>
-                    <div className="font-mono font-bold text-xl text-slate-800">
-                      {(viewDetailResult.downloadTimeMs / 1000).toFixed(2)}s
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-medium">スループット</div>
-                    <div className="font-mono font-bold text-xl text-blue-600">
-                      {(viewDetailResult.throughputBps / 1024 / 1024).toFixed(2)}
-                      <span className="text-xs ml-1">Mbps</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-3xl">
-              <Button variant="secondary" onClick={() => setViewDetailResult(null)}>
-                閉じる
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Toolbar */}
-      <Card className="p-4 flex flex-col gap-4 sticky top-0 z-20 shadow-md border-slate-200/80 backdrop-blur-xl bg-white/90">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <Input
-              placeholder="シナリオ名またはIDを検索..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2 relative">
-            <Button
-              variant="secondary"
-              onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-              icon={Filter}
-            >
-              フィルター
-            </Button>
-            {isFilterMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 z-30 p-2 animate-in fade-in zoom-in-95 duration-200">
-                {['SUCCESS', 'FAILED'].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      addFilter('status', s, 'ステータス');
-                      setIsFilterMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 rounded-xl transition-colors font-medium text-slate-600"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {selectedResultId && (
-              <div className="flex gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                <Button variant="danger" onClick={handleDeleteClick} icon={Trash2}>
-                  削除
-                </Button>
-                <Button
-                  variant="primary"
-                  className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
-                  onClick={handleOpenExport}
-                  icon={Download}
-                >
-                  出力
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-        {filters.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-            {filters.map((f, idx) => (
-              <Badge key={idx} color="blue" className="flex items-center gap-2 pr-1">
-                {f.label}
-                <button
-                  onClick={() => removeFilter(idx)}
-                  className="hover:bg-blue-200 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            ))}
-            <button
-              onClick={() => {
-                /* I'll add setFilters to the hook return for flexibility */
-              }}
-              className="text-xs text-slate-400 underline hover:text-slate-600 ml-2"
-            >
-              すべてクリア
-            </button>
-          </div>
-        )}
-      </Card>
-
-      {/* Results Table */}
-      <div className={`flex-1 flex flex-col ${TableStyles.Container} shadow-md border-slate-200`}>
-        <div className="overflow-auto flex-1 custom-scrollbar">
-          <table className="w-full text-left text-sm">
-            <thead className={`${TableStyles.Header} sticky top-0 z-10 shadow-sm`}>
-              <tr>
-                {[
-                  'executedAt',
-                  'scenarioName',
-                  'status',
-                  'allocator',
-                  'dataSizeMB',
-                  'throughputBps',
-                  'actualFee', // Added to sort/header
-                  'gasUsed', // Added to sort/header
-                  'baseFee', // Added to sort/header
-                ].map(k => (
-                  <th
-                    key={k}
-                    className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none whitespace-nowrap"
-                    onClick={() => handleSort(k as keyof ExperimentResult)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {columnLabels[k]} <SortIcon columnKey={k as keyof ExperimentResult} />
-                    </div>
-                  </th>
-                ))}
-                <th className="px-6 py-4 text-right">アクション</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {processedResults.map(r => (
-                <tr
-                  key={r.id}
-                  onClick={() => setSelectedResultId(r.id === selectedResultId ? null : r.id)}
-                  className={`group transition-colors cursor-pointer ${selectedResultId === r.id ? 'bg-blue-50/60' : 'hover:bg-slate-50'}`}
-                >
-                  <td className="px-6 py-3">
-                    <div
-                      className={`font-mono font-medium ${selectedResultId === r.id ? 'text-blue-700 font-bold' : 'text-slate-600'}`}
-                    >
-                      {r.id}
-                    </div>
-                    <div className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                      <Clock className="w-3 h-3" />
-                      {new Date(r.executedAt).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-3 font-bold text-slate-800">{r.scenarioName}</td>
-                  <td className="px-6 py-3">
-                    <StatusBadge status={r.status} />
-                  </td>
-                  <td className="px-6 py-3 text-xs">
-                    <div className="flex flex-col gap-1.5">
-                      <StrategyBadge value={r.allocator} />
-                      <StrategyBadge value={r.transmitter} />
-                    </div>
-                  </td>
-                  <td className="px-6 py-3 font-mono text-slate-600 font-bold">
-                    {r.dataSizeMB}{' '}
-                    <span className="text-[10px] text-slate-400 font-normal">MB</span>
-                  </td>
-                  <td className="px-6 py-3 font-mono font-bold text-slate-800">
-                    {(r.throughputBps / 1024 / 1024).toFixed(2)}{' '}
-                    <span className="text-[10px] text-slate-400 font-normal">Mbps</span>
-                  </td>
-                  {/* New Columns */}
-                  <td className="px-6 py-3 font-mono text-amber-600 font-bold">
-                    {r.actualFee !== undefined ? r.actualFee.toFixed(1) : '-'}
-                    <span className="text-[10px] text-amber-400 font-normal ml-0.5">TKN</span>
-                  </td>
-                  <td className="px-6 py-3 font-mono text-slate-500">
-                    {r.gasUsed !== undefined ? r.gasUsed.toLocaleString() : '-'}
-                  </td>
-                  <td className="px-6 py-3 font-mono text-slate-500 text-xs">
-                    {r.baseFee !== undefined ? r.baseFee.toFixed(5) : '-'}
-                  </td>
-
-                  <td className="px-6 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={e => {
-                        e.stopPropagation();
-                        setViewDetailResult(r);
-                      }}
-                      className="hover:bg-blue-50 hover:text-blue-600 rounded-full w-10 h-10 p-0"
-                    >
-                      <FileText className="w-5 h-5" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Result Table */}
+      <ResultTable
+        results={processedResults}
+        sortConfig={sortConfig}
+        onSort={handleSort}
+        selectedResultId={selectedResultId}
+        onSelect={setSelectedResultId}
+        onViewDetail={setViewDetailResult}
+      />
     </div>
   );
 };

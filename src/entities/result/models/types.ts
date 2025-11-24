@@ -1,6 +1,6 @@
 // entities/result - 実験結果関連の型とモデル
 
-import type { SortDirection } from '../../../shared/types';
+import type { SortDirection } from '@/shared/types';
 
 export interface ExperimentResult {
   id: string;

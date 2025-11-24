@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ExperimentResult } from '@/entities/result';
-import type { FilterCondition, SortConfig } from '@/shared/types';
+import { ExperimentResult, FilterCondition, SortConfig } from '@/entities/result';
 
 /**
  * 実験結果のフィルタリングとソートのためのHook
@@ -11,6 +10,8 @@ export const useTableFilterSort = (data: ExperimentResult[], initialSort: SortCo
   const [sortConfig, setSortConfig] = useState<SortConfig>(initialSort);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
 
+  // 引数の key を keyof ExperimentResult として受け取るように変更されたため、キャストは不要になりますが、
+  // 念のため型安全性を維持したまま処理します。
   const handleSort = (key: keyof ExperimentResult) =>
     setSortConfig(c => ({
       key: key,
@@ -32,32 +33,25 @@ export const useTableFilterSort = (data: ExperimentResult[], initialSort: SortCo
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
       processed = processed.filter(item =>
-        // item は ExperimentResult 型なので as any を削除し、Object.values() の値は val で文字列化
         Object.values(item).some(val => String(val).toLowerCase().includes(lowerTerm))
       );
     }
     if (filters.length > 0) {
       processed = processed.filter(item =>
         filters.every(cond => {
-          // cond.key (string) を keyof ExperimentResult にキャスト
-          const key = cond.key as keyof ExperimentResult;
-          // item[key] を型安全にアクセス
+          const key = cond.key;
           return String(itemAccessor(item, key)) === cond.value;
         })
       );
     }
     processed.sort((a, b) => {
-      // sortConfig.key (string) を keyof ExperimentResult にキャスト
-      const key = sortConfig.key as keyof ExperimentResult;
+      const key = sortConfig.key;
 
-      // ソート対象の値を型安全に取得
       const av = itemAccessor(a, key);
       const bv = itemAccessor(b, key);
 
-      // undefinedチェックは維持
       if (av === undefined || bv === undefined) return 0;
 
-      // ソートロジック
       return av < bv
         ? sortConfig.direction === 'asc'
           ? -1

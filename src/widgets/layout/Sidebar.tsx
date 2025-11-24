@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeLayer, setActiveLayer })
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
             <Info className="w-16 h-16 text-white" />
           </div>
-          <div className="relative z-10">
+          <div className="relative z-1">
             <div className="flex items-center gap-2 mb-3 text-slate-300">
               <Zap className="w-4 h-4 text-yellow-400" />
               <div className="text-xs font-bold uppercase tracking-wider">Base Fee Status</div>

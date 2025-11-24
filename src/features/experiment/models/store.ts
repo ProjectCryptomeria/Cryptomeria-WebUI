@@ -1,12 +1,11 @@
 import { StoreSlice } from '@/shared/store/types';
 import { api } from '@/shared/api';
 import { ExperimentScenario, AllocatorStrategy, TransmitterStrategy, ExecutionResultDetails, ScenarioStatus } from '@/entities/scenario';
-import { UserAccount } from '@/entities/account'; // UserAccountをインポート
-// ExecutionState, GenerateScenariosParams, ValueParamをインポート
+import { UserAccount } from '@/entities/account';
 import { ExecutionState, GenerateScenariosParams, ValueParam } from './types';
 
 export const createExecutionSlice: StoreSlice<{
-  execution: ExecutionState; // any を ExecutionState に修正
+  execution: ExecutionState;
 }> = (set, get) => ({
   execution: {
     scenarios: [],
@@ -14,7 +13,6 @@ export const createExecutionSlice: StoreSlice<{
     isExecutionRunning: false,
     executionId: null,
 
-    // updateScenarioの型はExecutionStateで定義されているが、ここでは実装として updates の型を明確化
     updateScenario: (id: string, updates: Partial<ExperimentScenario> & { log?: string; resultDetails?: ExecutionResultDetails }, isComplete = false) => {
       // スライスをまたぐアクション呼び出し
       const { addToast, registerResult, updateUserBalance } = get();
@@ -42,6 +40,7 @@ export const createExecutionSlice: StoreSlice<{
                   if (newStatus === 'COMPLETE') {
                     toastTitle = `シナリオ #${s.id} 結果 (${s.uniqueId.substring(0, 8)}...)`;
                     toastMessage = `アカウント: ${userName} | 費用: ${actualCost} TKN (返金: ${refund} TKN) | 残高: ${currentBalance} TKN`;
+                    // ライブラリに結果を登録
                     if (details.result) {
                       registerResult(details.result);
                     }
@@ -91,7 +90,7 @@ export const createExecutionSlice: StoreSlice<{
       }));
     },
 
-    generateScenarios: async (params: GenerateScenariosParams) => { // any を GenerateScenariosParams に修正
+    generateScenarios: async (params: GenerateScenariosParams) => {
       const { addToast } = get();
       set(state => ({ execution: { ...state.execution, isGenerating: true } }));
 
@@ -102,15 +101,13 @@ export const createExecutionSlice: StoreSlice<{
       let idCounter = 1;
       const cleanName = params.projectName.replace(/[^a-zA-Z0-9_]/g, '') || 'Exp';
 
-      // ... (ロジックは元のファイルと同じため省略可能ですが、完全性のために記述します)
-      const getRange = (p: ValueParam): (string | number)[] => { // any を ValueParam に修正し、戻り値を明示
+      const getRange = (p: ValueParam): (string | number)[] => {
         if (p.mode === 'fixed') return [p.fixed!];
         const res = [];
         const start = Number(p.range.start);
         const end = Number(p.range.end);
         const step = Number(p.range.step);
 
-        // ValueParamのrange内のstart/end/stepはstring|numberの可能性があるが、Number()で変換しているため続行
         if (step <= 0 || start > end) return [start];
         for (let i = start; i <= end; i += step) {
           res.push(i);
@@ -131,7 +128,7 @@ export const createExecutionSlice: StoreSlice<{
       if (params.chainMode === 'range') {
         const { start, end, step } = params.chainRangeParams;
         const maxCount = sortedSelectedChains.length;
-        if (Number(step) > 0) { // Number() でキャストして型エラーを回避
+        if (Number(step) > 0) {
           for (let i = Number(start); i <= Number(end); i += Number(step)) {
             if (i > 0 && i <= maxCount) {
               chainCounts.push(i);
@@ -155,7 +152,7 @@ export const createExecutionSlice: StoreSlice<{
                   id: idCounter++,
                   uniqueId: `${cleanName}_${Date.now()}_${idCounter}`,
                   userId: params.selectedUserId,
-                  dataSize: ds as number, // ds/cs は number | string だが、APIに渡す際は number を想定
+                  dataSize: ds as number,
                   chunkSize: cs as number,
                   allocator: alloc,
                   transmitter: trans,
@@ -193,7 +190,6 @@ export const createExecutionSlice: StoreSlice<{
       await get().execution.recalculateAll(users);
     },
 
-    // projectNameは未使用だが拡張性のために確保
     executeScenarios: async projectName => {
       const { addToast, execution } = get();
       get().execution.updateExecutionStatus(true);
@@ -209,11 +205,11 @@ export const createExecutionSlice: StoreSlice<{
       }
     },
 
-    recalculateAll: async (users: UserAccount[]) => { // any[] を UserAccount[] に修正
+    recalculateAll: async (users: UserAccount[]) => {
       const { addToast } = get();
 
       const userBalances: { [key: string]: number } = {};
-      users.forEach((u: UserAccount) => { // any を UserAccount に修正
+      users.forEach((u: UserAccount) => {
         userBalances[u.id] = u.balance;
       });
 

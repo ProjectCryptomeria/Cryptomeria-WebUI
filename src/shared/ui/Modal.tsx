@@ -17,8 +17,9 @@ export const Modal: React.FC<{
 
   return (
     // 背景: backdrop-blur で背後のコンテンツをぼかし、フォーカスをモーダルに合わせる
+    // 修正: z-50 -> z-[100] に変更し、サイドバー等の要素より確実に前面に出す
     <div
-      className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all"
+      className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all"
       onClick={onClose}
     >
       {/* 本体: クリックイベントの伝播を止める(e.stopPropagation)ことで、背景クリックでのみ閉じるようにする */}

@@ -1,8 +1,8 @@
-import type { NodeStatus } from '../../entities/node';
-import { AllocatorStrategy, TransmitterStrategy } from '../../entities/scenario';
-import type { ExperimentPreset } from '../../entities/preset';
-import type { ExperimentResult } from '../../entities/result';
-import type { UserAccount, SystemAccount } from '../../entities/account';
+import type { NodeStatus } from '@/entities/node';
+import { AllocatorStrategy, TransmitterStrategy } from '@/entities/scenario';
+import type { ExperimentPreset } from '@/entities/preset';
+import type { ExperimentResult } from '@/entities/result';
+import type { UserAccount, SystemAccount } from '@/entities/account';
 
 /**
  * モックデータ生成サービス
