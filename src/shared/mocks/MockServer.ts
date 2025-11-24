@@ -1,4 +1,4 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/backend_mock/MockServer.ts
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-monitor/src/shared/mocks/MockServer.ts
 
 import { MempoolInfo, MonitoringUpdate, NodeStatus, PacketEvent, BlockEvent } from '@/entities/node';
 import {
@@ -172,14 +172,22 @@ class MockServerInstance {
     // Activeなノードのみブロック生成
     const activeNodes = this.nodes.filter(n => n.status === 'active');
     const blockEvents: BlockEvent[] = activeNodes.map(node => {
-      // Tx数の決定ロジック
+      // Tx数とブロックサイズの計算
       let txCount = 0;
+      let blockSizeMB = 0.001; // 最小サイズ (1 KB)
+      const BASE_OVERHEAD_MB = 0.05; // ブロックの基本オーバーヘッド (50 KB)
+
       if (node.type === 'data' && this.isExperimentRunning) {
-        // 実験実行中のDataChainはTxが混入 (1~10)
-        txCount = Math.floor(Math.random() * 10) + 1;
+        // [MODIFIED] DataChain: Tx数 0~20個 (1MB/Tx)
+        txCount = Math.floor(Math.random() * 21); // 0 ~ 20 Txs
+        const txLoadMB = txCount * (1.0 + Math.random() * 0.1); // 1.0MB ± 0.1MB/Tx
+        // ブロックサイズ = TX負荷 + 基本オーバーヘッド
+        blockSizeMB = parseFloat((txLoadMB + BASE_OVERHEAD_MB).toFixed(3));
+
       } else if (node.type === 'control' || node.type === 'meta') {
-        // Control/Metaはたまに管理Txが入る程度 (5%の確率で1)
+        // Control/Meta: Txは少ないが、わずかな管理サイズを持つ
         txCount = Math.random() > 0.95 ? 1 : 0;
+        blockSizeMB = parseFloat((Math.random() * 0.4 + 0.01).toFixed(3)); // 0.01MB ~ 0.5MB
       }
 
       // プロポーザーのダミー生成
@@ -191,12 +199,13 @@ class MockServerInstance {
         height: node.height, // 現在のHeightを使用
         timestamp: new Date().toISOString(),
         hash: Math.random().toString(16).substring(2, 10).toUpperCase(),
+        blockSizeMB, // [NEW] ブロックサイズ
         txCount,
         proposer: {
           address: `raidvalcons${Math.random().toString(36).substring(7)}`,
           label: `Validator-${proposerId}`,
         },
-      };
+      } as BlockEvent;
     });
 
     if (blockEvents.length > 0) {
@@ -353,15 +362,16 @@ class MockServerInstance {
         log: `[SYSTEM] Execution started. Deducted ${scenario.cost} TKN from account.`,
       });
 
-      // シミュレーション遅延 (実行中)
-      await new Promise(r => setTimeout(r, 800));
+      // シミュレーション遅延 (実行中) - 800ms -> 1500ms
+      await new Promise(r => setTimeout(r, 1500));
 
       this.broadcast('/ws/experiment/progress', {
         executionId,
         scenarioId: scenario.id,
         log: `[INFO] Uploading ${scenario.dataSize}MB data...`,
       });
-      await new Promise(r => setTimeout(r, 800));
+      // シミュレーション遅延 (実行中) - 800ms -> 1500ms
+      await new Promise(r => setTimeout(r, 1500));
 
       // 2. 実行完了後: 実コスト計算と返金 (Refund)
 

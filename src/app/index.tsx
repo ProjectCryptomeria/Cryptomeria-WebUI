@@ -1,4 +1,4 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-refact/src/app/index.tsx
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-monitor/src/app/index.tsx
 // app/index - アプリケーションのエントリーポイント
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -17,7 +17,7 @@ import type {
   ExecutionResultDetails,
   UpdateScenarioParams,
 } from '../entities/scenario';
-import type { MonitoringUpdate } from '../entities/node';
+import type { MonitoringUpdate, BlockEvent } from '../entities/node'; // [MODIFIED] BlockEventを追加
 import type { ExperimentResult } from '../entities/result';
 import { useWebSocket } from '../shared/lib/hooks/useWebSocket';
 import { useGlobalStore } from '../shared/store';
@@ -36,7 +36,9 @@ const App: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<AppLayer>(AppLayer.MONITORING);
 
   // setMinGasPrice を取得するように変更
-  const { setDeployedNodeCount, setMinGasPrice, loadData, execution } = useGlobalStore();
+  // [MODIFIED] monitoring sliceを取得
+  const { setDeployedNodeCount, setMinGasPrice, loadData, execution, monitoring } =
+    useGlobalStore();
 
   // WebSocketからモニタリングデータを受信
   useWebSocket<MonitoringUpdate>('/ws/monitoring', data => {
@@ -44,6 +46,13 @@ const App: React.FC = () => {
       setMinGasPrice(data.minGasPrice);
     }
     setDeployedNodeCount(data.deployedCount);
+  });
+
+  // [NEW] Block Feed WebSocketリスナーをAppに移動 (バックグラウンド受信を有効化)
+  useWebSocket<BlockEvent[]>('/ws/monitoring/blocks', data => {
+    if (data && data.length > 0) {
+      monitoring.addBlockEvents(data);
+    }
   });
 
   // 実験進捗WebSocketリスナー

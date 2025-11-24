@@ -53,8 +53,11 @@ export interface BlockEvent {
   /** ブロックハッシュのショートバージョン */
   hash: string;
 
+  /** ブロックサイズ (MB) - [NEW] */
+  blockSizeMB: number;
+
   /** ブロックに含まれるトランザクション数 */
-  txCount: number;
+  txCount: number; // Tx数も引き続き保持
 
   /** ブロックを提案したバリデータの情報 */
   proposer: {

@@ -9,6 +9,8 @@ import type {
 } from '@/entities/scenario';
 import type { Toast, NotificationItem } from '@/shared/types';
 import { GenerateScenariosParams } from '@/features/experiment/models/types';
+// [MODIFIED] 循環参照回避のため、types.tsからインポート
+import { MonitoringState } from '@/features/monitoring/models/types';
 
 // --- Slices Interfaces ---
 
@@ -25,10 +27,12 @@ export interface NotificationSlice {
 export interface NodeSlice {
   deployedNodeCount: number;
   isDockerBuilt: boolean;
-  minGasPrice: number | null; // 変更
+  minGasPrice: number | null;
+  monitoringViewMode: 'topology' | 'feed';
   setDeployedNodeCount: (count: number) => void;
   setIsDockerBuilt: (built: boolean) => void;
-  setMinGasPrice: (price: number) => void; // 変更
+  setMinGasPrice: (price: number) => void;
+  setMonitoringViewMode: (mode: 'topology' | 'feed') => void;
 }
 
 export interface EconomySlice {
@@ -76,6 +80,11 @@ export interface ExecutionSlice {
   };
 }
 
+// [NEW] Monitoring Slice Interface
+export interface MonitoringSlice {
+  monitoring: MonitoringState;
+}
+
 // --- Global State Type ---
 // 全てのスライスを結合した型
 export interface GlobalState
@@ -84,7 +93,9 @@ export interface GlobalState
   EconomySlice,
   PresetSlice,
   LibrarySlice,
-  ExecutionSlice {
+  ExecutionSlice,
+  MonitoringSlice // [NEW] 追加
+{
   loadData: () => Promise<void>; // 全データロード用
 }
 

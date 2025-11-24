@@ -78,6 +78,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ nodes }) => {
   }, [dataNodes, dataArea.xStart, dataArea.xEnd, dataArea.yBase]);
 
   // Helper: Get coordinates for packet animation
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getNodePos = (id: string) => {
     if (id === 'control-chain') return controlPos;
     if (id === 'meta-chain') return metaPos;

@@ -1,3 +1,4 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-monitor/src/shared/store/index.ts
 import { create } from 'zustand';
 import { GlobalState } from './types';
 
@@ -8,6 +9,7 @@ import { createEconomySlice } from '@/entities/account/models/store';
 import { createPresetSlice } from '@/entities/preset/models/store';
 import { createLibrarySlice } from '@/entities/result/models/store';
 import { createExecutionSlice } from '@/features/experiment/models/store';
+import { createMonitoringSlice } from '@/features/monitoring/models/store'; // [NEW]
 
 export const useGlobalStore = create<GlobalState>()((...a) => ({
   ...createNotificationSlice(...a),
@@ -16,6 +18,7 @@ export const useGlobalStore = create<GlobalState>()((...a) => ({
   ...createPresetSlice(...a),
   ...createLibrarySlice(...a),
   ...createExecutionSlice(...a),
+  ...createMonitoringSlice(...a), // [NEW]
 
   // Root Actions
   loadData: async () => {

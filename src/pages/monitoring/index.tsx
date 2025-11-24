@@ -13,13 +13,16 @@ import { useGlobalStore } from '@/shared/store';
 // Button コンポーネントは使用しなくなったため削除しても良いが、念のため残すか削除するか。ここでは未使用として削除。
 
 const MonitoringLayer: React.FC = () => {
-  const { setDeployedNodeCount } = useGlobalStore();
+  // [MODIFIED] グローバルステートから取得
+  const { setDeployedNodeCount, monitoringViewMode, setMonitoringViewMode } = useGlobalStore();
   const [nodes, setNodes] = useState<NodeStatus[]>([]);
   const [mempoolData, setMempoolData] = useState<MempoolInfo[]>([]);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
 
   // View State: false = Topology (Front), true = BlockFeed (Back)
-  const [isFlipped, setIsFlipped] = useState(false);
+  // [MODIFIED] グローバルステートに置き換え
+  const isFlipped = monitoringViewMode === 'feed';
+  const setIsFlipped = (flipped: boolean) => setMonitoringViewMode(flipped ? 'feed' : 'topology');
 
   const { isOpen, setIsOpen, height, panelRef, resizerRef, isDragging, isTransitioning } =
     useResizerPanel(550, 100, 0.8);
