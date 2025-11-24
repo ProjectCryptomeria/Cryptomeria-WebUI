@@ -1,5 +1,8 @@
+// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-monitor/src/features/monitoring/components/BlockFeed.tsx
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { BlockEvent } from '@/entities/node';
+import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
 import {
   Layers,
   Database,
@@ -13,7 +16,6 @@ import {
 import { Badge } from '@/shared/ui/Badge';
 import { Modal, ModalHeader } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
-import { useGlobalStore } from '@/shared/store';
 
 // 1レーンあたりのブロック履歴保持数
 const HISTORY_SIZE = 40; // 履歴を20から40に倍増
@@ -23,6 +25,9 @@ const MAX_BAR_HEIGHT = 90;
 
 // [NEW] スケールの最小フロア値 (MB) - 視覚的な最低基準 (この値以下にはスケールダウンしない)
 const MAX_BLOCK_SIZE_MB_FLOOR = 5.0;
+
+// チェーンごとのブロック履歴 (Map<chainName, BlockEvent[]>)
+type BlockHistoryMap = Map<string, BlockEvent[]>;
 
 // --- Helper Components ---
 
@@ -43,7 +48,7 @@ const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
   const [timeState, setTimeState] = useState(calculateTime);
 
   React.useEffect(() => {
-    // [MODIFIED] Unused eslint-disable directive を削除
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     setTimeState(calculateTime());
 
     const interval = setInterval(() => {
@@ -93,6 +98,7 @@ const BlockBar: React.FC<{
       onClick={() => onClick(block)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      // [MODIFIED] w-8に拡大、title属性削除
       className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group h-full pb-0 relative`}
     >
       {/* [NEW] カスタムポップオーバー */}
@@ -128,6 +134,7 @@ const BlockBar: React.FC<{
         #{block.height % 1000}
       </div>
       <div
+        // [MODIFIED] w-6に拡大
         className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg`}
         style={{ height: `${height}px` }}
       ></div>
@@ -137,6 +144,7 @@ const BlockBar: React.FC<{
 
 /**
  * 単一チェーンのレーン全体
+ * 【FIXED: Compiler error by moving slicing logic inside useMemo】
  */
 const ChainLane: React.FC<{
   chainName: string;
@@ -144,18 +152,21 @@ const ChainLane: React.FC<{
   history: BlockEvent[];
   openTxModal: (block: BlockEvent) => void;
 }> = React.memo(({ chainName, type, history, openTxModal }) => {
+  // [MODIFIED] displayHistoryはレンダリングのために外で計算を維持
   const displayHistory = history.slice(-HISTORY_SIZE);
   const latestBlock = displayHistory[displayHistory.length - 1] || null;
 
-  // [MODIFIED] Adaptive Scaling Calculation - 依存配列を 'history' のみに修正
+  // [NEW LOGIC] Adaptive Scaling Calculation - 依存配列を 'history' のみに変更
   const maxObservedMB = useMemo(() => {
+    // [MODIFIED] slicing logic inside useMemo
     const currentDisplayHistory = history.slice(-HISTORY_SIZE);
 
     if (currentDisplayHistory.length === 0) return MAX_BLOCK_SIZE_MB_FLOOR;
     const max = Math.max(...currentDisplayHistory.map(b => b.blockSizeMB));
 
+    // 最小スケールフロア (5.0 MB) を設定し、スケールが小さくなりすぎないようにする
     return Math.max(MAX_BLOCK_SIZE_MB_FLOOR, max);
-  }, [history]);
+  }, [history]); // [MODIFIED] 依存配列を 'history' に修正
 
   const scaleMax = maxObservedMB;
   const scaleHalf = scaleMax / 2;
@@ -280,7 +291,7 @@ const ChainLane: React.FC<{
             {scaleHalf.toFixed(1)} MB
           </span>
 
-          {/* Quarter Line (25% - ScaleQuarter MB) */}
+          {/* [MODIFIED] Quarter Line (25% - ScaleQuarter MB) */}
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-300/50"
             style={{ bottom: '38px' }}
@@ -300,9 +311,10 @@ const ChainLane: React.FC<{
         </div>
 
         {/* 2. スクロール可能なバーエリア */}
-        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-4 custom-scrollbar z-10">
+        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-3 custom-scrollbar z-10">
           <div className="flex items-end h-full justify-start pl-16 pr-8">
             {displayHistory.map(block => (
+              // [MODIFIED] maxScaleを渡す
               <BlockBar
                 key={block.height}
                 block={block}
@@ -312,7 +324,7 @@ const ChainLane: React.FC<{
             ))}
 
             <div className="h-full w-px bg-indigo-400/60 ml-1 mr-1 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
-              <div className="absolute bottom-0 -left-1 text-[9px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
+              <div className="absolute bottom-[110px] -left-0 text-[9px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
                 CURRENT HEAD
               </div>
             </div>
@@ -327,11 +339,32 @@ const ChainLane: React.FC<{
  * メインコンポーネント: BlockFeed
  */
 export const BlockFeed: React.FC = () => {
-  const { monitoring } = useGlobalStore();
-  const blockHistory = monitoring.blockHistory;
-
+  const [blockHistory, setBlockHistory] = useState<BlockHistoryMap>(new Map());
   const [filter, setFilter] = useState<'all' | 'control' | 'meta' | 'data'>('all');
   const [txModal, setTxModal] = useState<BlockEvent | null>(null);
+
+  // WebSocket受信と履歴更新
+  useWebSocket<BlockEvent[]>('/ws/monitoring/blocks', newBlocks => {
+    if (newBlocks && newBlocks.length > 0) {
+      setBlockHistory(prev => {
+        const next = new Map(prev);
+
+        newBlocks.forEach(block => {
+          const chainName = block.chainName;
+          const currentHistory = next.get(chainName) || [];
+
+          // 同じ高さのブロックは追加しない (重複防止)
+          if (currentHistory.some(b => b.height === block.height)) return;
+
+          // 新しいブロックを履歴に追加
+          const updatedHistory = [...currentHistory, block];
+          next.set(chainName, updatedHistory);
+        });
+
+        return next;
+      });
+    }
+  });
 
   // レーン表示順序の決定とフィルタリング
   const orderedChains = useMemo(() => {
@@ -355,6 +388,7 @@ export const BlockFeed: React.FC = () => {
   }, [blockHistory, filter]);
 
   const openTxModal = useCallback((block: BlockEvent) => {
+    // BlockSizeMBが0.01MB以上なら開くように変更
     if (block.blockSizeMB > 0.01) {
       setTxModal(block);
     }
@@ -422,6 +456,7 @@ export const BlockFeed: React.FC = () => {
         <ModalHeader
           title={`Block Detail: ${txModal?.chainName} #${txModal?.height}`}
           subTitle={`Proposer: ${txModal?.proposer.label}`}
+          // BlockSizeMBが0.5MB以上ならWarningにする
           icon={txModal && txModal.blockSizeMB > 0.5 ? AlertTriangle : CheckCircle}
           iconColor={txModal && txModal.blockSizeMB > 0.5 ? 'text-amber-600' : 'text-emerald-600'}
           onClose={closeTxModal}
