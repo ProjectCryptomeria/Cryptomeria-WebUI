@@ -1,4 +1,4 @@
-// syugeeeeeeeeeei/raidchain-webui/Raidchain-WebUI-temp-monitor/src/features/monitoring/components/BlockFeed.tsx
+// src/features/monitoring/components/BlockFeed.tsx
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { BlockEvent } from '@/entities/node';
@@ -89,6 +89,9 @@ const BlockBar: React.FC<{
     colorClass = 'bg-emerald-400/80 hover:bg-emerald-500/80'; // 最小/空ブロック
   }
 
+  // [NEW] 間引き表示の判定: 末尾が0または5の時だけ表示
+  const isInterval = block.height % 5 === 0;
+
   return (
     <div
       onClick={() => onClick(block)}
@@ -97,11 +100,23 @@ const BlockBar: React.FC<{
       // [MODIFIED] h-fullを削除。これがあったせいで、バーのデザインと実際の高さが合わなかった
       className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative`}
     >
-      {/* HEIGHTの簡略表示 (バーの上に表示) */}
-      {/* [MODIFIED] textのフォントサイズと色を調整。h-fullを調整することで表示されるようになった */}
-      <div className="absolute bottom-full mb-1 text-[14px] font-mono font-bold group-hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap">
-        #{block.height % 1000}
+      {/* [MODIFIED] HEIGHTの簡略表示 (バーの下にX軸ラベルとして表示) */}
+      <div
+        className={`
+          absolute top-full mt-2 text-[10px] font-mono font-bold whitespace-nowrap px-1 rounded
+          transition-all duration-150 z-10 pointer-events-none
+          ${
+            isInterval
+              ? 'text-slate-400 opacity-100' // 間引き対象: 常時薄く表示
+              : 'text-slate-600 opacity-0' // その他: 通常非表示
+          }
+          group-hover:opacity-100 group-hover:text-indigo-600 group-hover:bg-white group-hover:shadow-sm group-hover:z-20 group-hover:scale-110
+        `}
+      >
+        {/* 下3桁だけ表示 */}
+        {block.height % 1000}
       </div>
+
       <div
         // [MODIFIED] w-6に拡大
         className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg`}
@@ -235,7 +250,7 @@ const ChainLane: React.FC<{
       {/* --- 右側流動エリア (スパークライン) --- */}
       <div className="flex-1 relative h-full bg-slate-100/50">
         {/* 1. 背景グリッド線と補助数値 (固定表示) - 動的スケールを適用 */}
-        <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 pointer-events-none z-0 mb-5">
           {/* Max Line (100% - ScaleMax MB) */}
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-400/60"
@@ -280,9 +295,9 @@ const ChainLane: React.FC<{
         </div>
 
         {/* 2. スクロール可能なバーエリア */}
-        {/* [MODIFIED] bottomを調整して表示領域を全体的に上にシフト */}
-        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-2 ml-16 custom-scrollbar z-10">
-          <div className="flex items-end h-full justify-start pr-32">
+        {/* [MODIFIED] bottomを調整して表示領域を全体的に上にシフトし、pb-8を追加してX軸ラベルのスペースを確保 */}
+        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end ml-16 custom-scrollbar z-10">
+          <div className="flex items-end h-full justify-start pr-32 pb-8">
             {displayHistory.map(block => (
               // [MODIFIED] maxScaleを渡す
               <BlockBar
