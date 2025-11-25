@@ -100,25 +100,25 @@ const BlockBar: React.FC<{
       // [MODIFIED] h-fullを削除。これがあったせいで、バーのデザインと実際の高さが合わなかった
       className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative`}
     >
-      {/* [MODIFIED] HEIGHTの簡略表示 (バーの下にX軸ラベルとして表示) */}
+      {/* HEIGHTの簡略表示 (バーの下にX軸ラベルとして表示) */}
       <div
         className={`
           absolute top-full mt-2 text-[10px] font-mono font-bold whitespace-nowrap px-1 rounded
-          transition-all duration-150 z-10 pointer-events-none
+          transition-all duration-10 z-10 pointer-events-none
           ${
             isInterval
               ? 'text-slate-400 opacity-100' // 間引き対象: 常時薄く表示
               : 'text-slate-600 opacity-0' // その他: 通常非表示
           }
-          group-hover:opacity-100 group-hover:text-indigo-600 group-hover:bg-white group-hover:shadow-sm group-hover:z-20 group-hover:scale-110
+          group-hover:text-indigo-600 group-hover:bg-white group-hover:shadow-sm group-hover:z-20
         `}
       >
         {/* 下3桁だけ表示 */}
-        {block.height % 1000}
+        {block.height}
       </div>
 
+      {/* バー本体 */}
       <div
-        // [MODIFIED] w-6に拡大
         className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg`}
         style={{ height: `${height}px` }}
       ></div>
