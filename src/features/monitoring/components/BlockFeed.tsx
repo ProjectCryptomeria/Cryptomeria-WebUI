@@ -18,10 +18,11 @@ import { Modal, ModalHeader } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 
 // 1レーンあたりのブロック履歴保持数
-const HISTORY_SIZE = 40;
+const HISTORY_SIZE = 100;
 
-// バーの最大高さ (px) - グリッド線の位置計算に使用
-const MAX_BAR_HEIGHT = 90;
+// グラフ描画用の定数
+const GRAPH_HEIGHT = 90; // バーの最大高さ (px)
+const GRAPH_BOTTOM_OFFSET = 30; // グラフ下端のオフセット (px) - "0 MB" ラインの位置
 
 // スケールの最小フロア値 (MB)
 const MAX_BLOCK_SIZE_MB_FLOOR = 1.0;
@@ -61,7 +62,6 @@ const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
 
 /**
  * ツールチップ用ポータルコンポーネント
- * (簡易的に絶対配置で実装)
  */
 const HoverTooltip: React.FC<{
   block: BlockEvent;
@@ -74,8 +74,8 @@ const HoverTooltip: React.FC<{
       className="absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
       style={{
         left: position.x,
-        top: position.y - 10, // 少し上に表示
-        transform: 'translate(-50%, -100%)', // 中央揃え・上方向へ展開
+        top: position.y - 10,
+        transform: 'translate(-50%, -100%)',
       }}
     >
       <div className="bg-slate-800 text-white text-xs rounded-lg py-2 px-3 shadow-xl border border-slate-600 whitespace-nowrap">
@@ -90,7 +90,6 @@ const HoverTooltip: React.FC<{
           Hash: {block.hash.substring(0, 6)}
         </div>
       </div>
-      {/* 吹き出しの矢印 */}
       <div className="w-2 h-2 bg-slate-800 transform rotate-45 absolute left-1/2 -bottom-1 -translate-x-1/2 border-r border-b border-slate-600"></div>
     </div>
   );
@@ -106,8 +105,9 @@ const BlockBar: React.FC<{
   onHover: (block: BlockEvent | null, e: React.MouseEvent | null) => void;
 }> = ({ block, onClick, maxScale, onHover }) => {
   const blockSize = block.blockSizeMB;
+  // グラフの高さを計算 (最大高さに対する比率)
   const sizeRatio = Math.min(1, blockSize / maxScale);
-  const height = Math.max(4, Math.floor(sizeRatio * MAX_BAR_HEIGHT));
+  const height = Math.max(4, Math.floor(sizeRatio * GRAPH_HEIGHT));
 
   let colorClass = 'bg-slate-300';
   if (blockSize > maxScale * 0.8) {
@@ -127,25 +127,33 @@ const BlockBar: React.FC<{
       onClick={() => onClick(block)}
       onMouseEnter={e => onHover(block, e)}
       onMouseLeave={() => onHover(null, null)}
-      // [MODIFIED] min-h-[20px] を追加し、透明なヒットエリアを確保
-      className="w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative min-h-[20px]"
+      className="w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group relative"
+      // バーの下端位置をグリッド線(0MB)に合わせるためのスタイル
+      // [MODIFIED] 当たり判定を最低20px確保 (パディング分+20px)
+      style={{
+        paddingBottom: `${GRAPH_BOTTOM_OFFSET}px`,
+        minHeight: `${GRAPH_BOTTOM_OFFSET + 20}px`,
+      }}
     >
+      {/* Bar Body */}
+      <div
+        className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg group-hover:brightness-110 origin-bottom`}
+        style={{
+          height: `${height}px`,
+          // [MODIFIED] 下から伸びるアニメーション
+          animation: 'grow-vertical 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        }}
+      ></div>
       {/* HEIGHT Label */}
       <div
         className={`
-          absolute top-full mt-2 text-[10px] font-mono font-bold whitespace-nowrap px-1 rounded
+          absolute bottom-2 mt-1 text-[10px] font-mono font-bold whitespace-nowrap px-1 rounded
           transition-all duration-1 z-10 pointer-events-none
           ${isInterval ? 'text-slate-400 opacity-100' : 'text-slate-600 opacity-0'}
         `}
       >
         {block.height}
       </div>
-
-      {/* Bar Body */}
-      <div
-        className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg group-hover:brightness-110`}
-        style={{ height: `${height}px` }}
-      ></div>
     </div>
   );
 };
@@ -171,7 +179,6 @@ const ChainLane: React.FC<{
   useEffect(() => {
     if (isAutoScroll && scrollContainerRef.current) {
       const { scrollWidth, clientWidth } = scrollContainerRef.current;
-      // スムーズスクロールで右端へ
       scrollContainerRef.current.scrollTo({
         left: scrollWidth - clientWidth,
         behavior: 'smooth',
@@ -179,23 +186,16 @@ const ChainLane: React.FC<{
     }
   }, [displayHistory, isAutoScroll]);
 
-  // ユーザースクロール監視
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-
-    // 右端付近 (許容誤差 10px) にいるか判定
     const isAtRight = Math.abs(scrollWidth - clientWidth - scrollLeft) < 10;
 
     if (isAtRight) {
-      // 右端に到達したら自動スクロール再開
       setIsAutoScroll(true);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     } else {
-      // ユーザーが左にスクロールした場合、一時停止
       setIsAutoScroll(false);
-
-      // 一定時間 (5秒) 操作がなければ自動スクロール復帰
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
       scrollTimeoutRef.current = setTimeout(() => {
         setIsAutoScroll(true);
@@ -210,21 +210,17 @@ const ChainLane: React.FC<{
   } | null>(null);
 
   const handleBarHover = useCallback((block: BlockEvent | null, e: React.MouseEvent | null) => {
-    if (block && e) {
-      // 親コンテナに対する相対位置を取得 (スクロールコンテナの外側に配置するため)
-      const containerRect = e.currentTarget.parentElement?.parentElement?.getBoundingClientRect();
+    if (block && e && scrollContainerRef.current) {
+      const containerRect = scrollContainerRef.current.getBoundingClientRect();
       const targetRect = e.currentTarget.getBoundingClientRect();
 
-      if (containerRect) {
-        setHoverInfo({
-          block,
-          pos: {
-            // スクロールコンテナの左端からの相対X座標 + 要素の半分の幅
-            x: targetRect.left - containerRect.left + targetRect.width / 2 + 64, // 64px is ml-16 offset adjustment
-            y: targetRect.top - containerRect.top,
-          },
-        });
-      }
+      setHoverInfo({
+        block,
+        pos: {
+          x: targetRect.left - containerRect.left + targetRect.width / 2,
+          y: targetRect.top - containerRect.top,
+        },
+      });
     } else {
       setHoverInfo(null);
     }
@@ -239,8 +235,9 @@ const ChainLane: React.FC<{
   }, [history]);
 
   const scaleMax = maxObservedMB;
-  const scaleHalf = scaleMax / 2;
-  const scaleQuarter = scaleMax / 4;
+
+  // グリッド線とラベルの位置定義（0%, 25%, 50%, 100%）
+  const gridLevels = [0, 0.25, 0.5, 1.0];
 
   const getTypeIcon = (t: string) => {
     switch (t) {
@@ -284,7 +281,7 @@ const ChainLane: React.FC<{
     <div
       className={`flex h-40 border-b border-dashed border-slate-300 items-center transition-colors duration-300 group ${getTypeColor(type)}`}
     >
-      {/* --- ステータスエリア（左側・固定） --- */}
+      {/* --- ステータスエリア（左側・固定幅） --- */}
       <div className="w-80 flex-shrink-0 p-4 border-r border-slate-300 flex flex-col justify-between h-full bg-white/80 backdrop-blur-sm z-20">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 shadow-sm border border-slate-200">
@@ -333,57 +330,56 @@ const ChainLane: React.FC<{
         </div>
       </div>
 
-      {/* --- グラフエリア --- */}
-      <div className="flex-1 relative h-full bg-slate-100/50 group/lane">
-        {/* --- グラフスケールエリア（背景グリッド線と補助数値・固定） --- */}
-        <div className="absolute inset-0 pointer-events-none z-0 mb-5">
-          <div
-            className="absolute left-0 right-0 border-t border-dashed border-slate-400/60"
-            style={{ bottom: '106px' }}
-          ></div>
-          <span
-            className="absolute left-2 text-[10px] font-bold font-mono text-slate-600 bg-white/80 px-1.5 rounded border border-slate-200"
-            style={{ bottom: '106px', transform: 'translateY(50%)' }}
-          >
-            {scaleMax.toFixed(1)} MB
-          </span>
+      {/* --- グラフエリア (Sticky Axis Pattern) --- */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 h-full bg-slate-100/50 group/lane overflow-x-auto overflow-y-hidden custom-scrollbar relative min-w-0"
+      >
+        <div className="min-w-full h-full flex relative w-max">
+          {/* 1. グリッド線レイヤー (絶対配置で全幅確保) */}
+          <div className="absolute inset-0 pointer-events-none z-0">
+            {gridLevels.map(level => {
+              const bottomPos = GRAPH_BOTTOM_OFFSET + GRAPH_HEIGHT * level;
+              const isZero = level === 0;
 
-          <div
-            className="absolute left-0 right-0 border-t border-dashed border-slate-300/70"
-            style={{ bottom: '61px' }}
-          ></div>
-          <span
-            className="absolute left-2 text-[10px] font-bold font-mono text-slate-500 bg-white/80 px-1.5 rounded border border-slate-200"
-            style={{ bottom: '61px', transform: 'translateY(50%)' }}
-          >
-            {scaleHalf.toFixed(1)} MB
-          </span>
+              return (
+                <div
+                  key={level}
+                  className={`absolute left-0 w-full border-t ${isZero ? 'border-slate-300' : 'border-dashed border-slate-300/60'}`}
+                  style={{ bottom: `${bottomPos}px` }}
+                />
+              );
+            })}
+          </div>
 
-          <div
-            className="absolute left-0 right-0 border-t border-dashed border-slate-300/50"
-            style={{ bottom: '38px' }}
-          ></div>
-          <span
-            className="absolute left-2 text-[10px] font-bold font-mono text-slate-500/70 bg-white/80 px-1.5 rounded border border-slate-200"
-            style={{ bottom: '38px', transform: 'translateY(50%)' }}
-          >
-            {scaleQuarter.toFixed(1)} MB
-          </span>
+          {/* 2. 左側の目盛りエリア (Sticky配置) */}
+          <div className="sticky left-0 top-0 bottom-0 w-16 flex-shrink-0 z-20 h-full pointer-events-none">
+            {/* 背景: 透過なしの不透明背景 */}
+            <div className="absolute inset-0 bg-slate-100 border-r border-slate-200/50"></div>
 
-          <div className="absolute left-0 right-0 border-t border-slate-300 bottom-3"></div>
-          <span className="absolute bottom-1 left-2 text-[10px] font-bold font-mono text-slate-500 bg-white px-1.5 rounded border border-slate-200">
-            0 MB
-          </span>
-        </div>
+            {/* 目盛りラベル (計算位置に配置) */}
+            {gridLevels.map(level => {
+              const bottomPos = GRAPH_BOTTOM_OFFSET + GRAPH_HEIGHT * level;
+              const value = scaleMax * level;
 
-        {/* --- グラフビューエリア（棒グラフ・スクロール） --- */}
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          // 表示がスケールと被らないようにml-16を設定して左に余白。
-          className="absolute inset-0 overflow-x-auto overflow-y-hidden ml-16 custom-scrollbar z-10"
-        >
-          <div className="flex items-end h-full min-w-full justify-start pb-8">
+              return (
+                <span
+                  key={level}
+                  className="absolute left-2 text-[10px] font-bold font-mono text-slate-500 bg-white px-1.5 rounded border border-slate-200 shadow-sm"
+                  style={{
+                    bottom: `${bottomPos}px`,
+                    transform: 'translateY(50%)',
+                  }}
+                >
+                  {value.toFixed(level === 0 ? 0 : 1)} MB
+                </span>
+              );
+            })}
+          </div>
+
+          {/* 3. バー描画エリア (Flexアイテム) */}
+          <div className="flex items-end h-full z-10 flex-grow flex-shrink-0 pb-0">
             {displayHistory.map(block => (
               <BlockBar
                 key={block.height}
@@ -394,12 +390,14 @@ const ChainLane: React.FC<{
               />
             ))}
 
-            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-100 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
-              <div className="absolute bottom-[110px] -left-0 text-[9px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
+            {/* Current Head Line */}
+            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-12 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
+              <div className="absolute bottom-[130px] -left-0 text-[10px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
                 CURRENT HEAD
               </div>
             </div>
-            <div className="w-[50px] h-full bg-transparent"></div>
+            {/* 余白 */}
+            <div className="w-4 h-full bg-transparent flex-shrink-0"></div>
           </div>
         </div>
 
@@ -465,6 +463,14 @@ export const BlockFeed: React.FC = () => {
 
   return (
     <div className="w-full h-full bg-slate-50 rounded-xl border border-slate-300 flex flex-col overflow-hidden relative">
+      {/* Animation Keyframes Definition */}
+      <style>{`
+        @keyframes grow-vertical {
+          from { transform: scaleY(0); }
+          to { transform: scaleY(1); }
+        }
+      `}</style>
+
       {/* Header & Filter */}
       <div className="px-6 py-4 bg-white border-b border-slate-200 flex justify-between items-center shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-2">
