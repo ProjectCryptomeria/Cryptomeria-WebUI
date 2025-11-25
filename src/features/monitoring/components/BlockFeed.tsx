@@ -1,6 +1,6 @@
 // src/features/monitoring/components/BlockFeed.tsx
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { BlockEvent } from '@/entities/node';
 import { useWebSocket } from '@/shared/lib/hooks/useWebSocket';
 import {
@@ -18,12 +18,12 @@ import { Modal, ModalHeader } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 
 // 1レーンあたりのブロック履歴保持数
-const HISTORY_SIZE = 40; // 履歴を20から40に倍増
+const HISTORY_SIZE = 40;
 
 // バーの最大高さ (px) - グリッド線の位置計算に使用
 const MAX_BAR_HEIGHT = 90;
 
-// [NEW] スケールの最小フロア値 (MB) - 視覚的な最低基準 (この値以下にはスケールダウンしない)
+// スケールの最小フロア値 (MB)
 const MAX_BLOCK_SIZE_MB_FLOOR = 1.0;
 
 // チェーンごとのブロック履歴 (Map<chainName, BlockEvent[]>)
@@ -33,7 +33,6 @@ type BlockHistoryMap = Map<string, BlockEvent[]>;
 
 /**
  * ブロック生成から経過した時間を表示するヘルパー
- * 【FIXED: Contrast increased】
  */
 const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
   const calculateTime = useCallback(() => {
@@ -48,9 +47,7 @@ const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
   const [timeState, setTimeState] = useState(calculateTime);
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     setTimeState(calculateTime());
-
     const interval = setInterval(() => {
       setTimeState(calculateTime());
     }, 1000);
@@ -63,61 +60,90 @@ const TimeAgo: React.FC<{ timestamp: string }> = React.memo(({ timestamp }) => {
 });
 
 /**
+ * ツールチップ用ポータルコンポーネント
+ * (簡易的に絶対配置で実装)
+ */
+const HoverTooltip: React.FC<{
+  block: BlockEvent;
+  position: { x: number; y: number } | null;
+}> = ({ block, position }) => {
+  if (!position) return null;
+
+  return (
+    <div
+      className="absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+      style={{
+        left: position.x,
+        top: position.y - 10, // 少し上に表示
+        transform: 'translate(-50%, -100%)', // 中央揃え・上方向へ展開
+      }}
+    >
+      <div className="bg-slate-800 text-white text-xs rounded-lg py-2 px-3 shadow-xl border border-slate-600 whitespace-nowrap">
+        <div className="font-bold mb-1 flex items-center gap-2">
+          <span className="text-emerald-400">#{block.height}</span>
+          <span className="text-slate-400">|</span>
+          <span>{block.blockSizeMB.toFixed(3)} MB</span>
+        </div>
+        <div className="text-slate-300 font-mono text-[10px]">
+          Txs: <span className="text-white font-bold">{block.txCount}</span>
+          <span className="mx-2 opacity-50">/</span>
+          Hash: {block.hash.substring(0, 6)}
+        </div>
+      </div>
+      {/* 吹き出しの矢印 */}
+      <div className="w-2 h-2 bg-slate-800 transform rotate-45 absolute left-1/2 -bottom-1 -translate-x-1/2 border-r border-b border-slate-600"></div>
+    </div>
+  );
+};
+
+/**
  * 1ブロックのスパークライン（棒）
  */
 const BlockBar: React.FC<{
   block: BlockEvent;
   onClick: (block: BlockEvent) => void;
   maxScale: number;
-}> = ({ block, onClick, maxScale }) => {
-  // ブロックサイズに基づき、高さと色を決定
+  onHover: (block: BlockEvent | null, e: React.MouseEvent | null) => void;
+}> = ({ block, onClick, maxScale, onHover }) => {
   const blockSize = block.blockSizeMB;
-  const sizeRatio = Math.min(1, blockSize / maxScale); // maxScaleを上限とする
-
-  // 高さ計算: 最小4px, 最大90px
+  const sizeRatio = Math.min(1, blockSize / maxScale);
   const height = Math.max(4, Math.floor(sizeRatio * MAX_BAR_HEIGHT));
 
-  // 色の決定: スケールに対する相対的なサイズで色を変える
   let colorClass = 'bg-slate-300';
   if (blockSize > maxScale * 0.8) {
-    colorClass = 'bg-red-600 hover:bg-red-700'; // 負荷高 (80%超)
+    colorClass = 'bg-red-600 hover:bg-red-700';
   } else if (blockSize > maxScale * 0.4) {
-    colorClass = 'bg-amber-600 hover:bg-amber-700'; // 負荷中 (40%超)
+    colorClass = 'bg-amber-600 hover:bg-amber-700';
   } else if (blockSize > 0.01) {
-    colorClass = 'bg-indigo-600 hover:bg-indigo-700'; // わずかなデータ
+    colorClass = 'bg-indigo-600 hover:bg-indigo-700';
   } else {
-    colorClass = 'bg-emerald-400/80 hover:bg-emerald-500/80'; // 最小/空ブロック
+    colorClass = 'bg-emerald-400/80 hover:bg-emerald-500/80';
   }
 
-  // [NEW] 間引き表示の判定: 末尾が0または5の時だけ表示
   const isInterval = block.height % 5 === 0;
 
   return (
     <div
       onClick={() => onClick(block)}
-      title={`Height: ${block.height}, Size: ${blockSize.toFixed(3)} MB, Txs: ${block.txCount}`}
-      // [MODIFIED] w-8に拡大、title属性削除
-      // [MODIFIED] h-fullを削除。これがあったせいで、バーのデザインと実際の高さが合わなかった
-      className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative`}
+      onMouseEnter={e => onHover(block, e)}
+      onMouseLeave={() => onHover(null, null)}
+      // [MODIFIED] min-h-[20px] を追加し、透明なヒットエリアを確保
+      className="w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative min-h-[20px]"
     >
-      {/* HEIGHTの簡略表示 (バーの下にX軸ラベルとして表示) */}
+      {/* HEIGHT Label */}
       <div
         className={`
           absolute top-full mt-2 text-[10px] font-mono font-bold whitespace-nowrap px-1 rounded
-          transition-all duration-10 z-10 pointer-events-none
-          ${
-            isInterval
-              ? 'text-slate-400 opacity-100' // 間引き対象: 常時薄く表示
-              : 'text-slate-600 opacity-0' // その他: 通常非表示
-          }`}
+          transition-all duration-1 z-10 pointer-events-none
+          ${isInterval ? 'text-slate-400 opacity-100' : 'text-slate-600 opacity-0'}
+        `}
       >
-        {/* 下3桁だけ表示 */}
         {block.height}
       </div>
 
-      {/* バー本体 */}
+      {/* Bar Body */}
       <div
-        className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg`}
+        className={`w-6 rounded-t-sm ${colorClass} transition-all duration-200 shadow-sm group-hover:shadow-lg group-hover:brightness-110`}
         style={{ height: `${height}px` }}
       ></div>
     </div>
@@ -126,7 +152,6 @@ const BlockBar: React.FC<{
 
 /**
  * 単一チェーンのレーン全体
- * 【FIXED: Compiler error by moving slicing logic inside useMemo】
  */
 const ChainLane: React.FC<{
   chainName: string;
@@ -134,21 +159,84 @@ const ChainLane: React.FC<{
   history: BlockEvent[];
   openTxModal: (block: BlockEvent) => void;
 }> = React.memo(({ chainName, type, history, openTxModal }) => {
-  // [MODIFIED] displayHistoryはレンダリングのために外で計算を維持
   const displayHistory = history.slice(-HISTORY_SIZE);
   const latestBlock = displayHistory[displayHistory.length - 1] || null;
 
-  // [NEW LOGIC] Adaptive Scaling Calculation - 依存配列を 'history' のみに変更
-  const maxObservedMB = useMemo(() => {
-    // [MODIFIED] slicing logic inside useMemo
-    const currentDisplayHistory = history.slice(-HISTORY_SIZE);
+  // --- Scroll Logic ---
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // データ更新時に自動スクロール
+  useEffect(() => {
+    if (isAutoScroll && scrollContainerRef.current) {
+      const { scrollWidth, clientWidth } = scrollContainerRef.current;
+      // スムーズスクロールで右端へ
+      scrollContainerRef.current.scrollTo({
+        left: scrollWidth - clientWidth,
+        behavior: 'smooth',
+      });
+    }
+  }, [displayHistory, isAutoScroll]);
+
+  // ユーザースクロール監視
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+
+    // 右端付近 (許容誤差 10px) にいるか判定
+    const isAtRight = Math.abs(scrollWidth - clientWidth - scrollLeft) < 10;
+
+    if (isAtRight) {
+      // 右端に到達したら自動スクロール再開
+      setIsAutoScroll(true);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    } else {
+      // ユーザーが左にスクロールした場合、一時停止
+      setIsAutoScroll(false);
+
+      // 一定時間 (5秒) 操作がなければ自動スクロール復帰
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsAutoScroll(true);
+      }, 5000);
+    }
+  };
+
+  // --- Tooltip Logic ---
+  const [hoverInfo, setHoverInfo] = useState<{
+    block: BlockEvent;
+    pos: { x: number; y: number };
+  } | null>(null);
+
+  const handleBarHover = useCallback((block: BlockEvent | null, e: React.MouseEvent | null) => {
+    if (block && e) {
+      // 親コンテナに対する相対位置を取得 (スクロールコンテナの外側に配置するため)
+      const containerRect = e.currentTarget.parentElement?.parentElement?.getBoundingClientRect();
+      const targetRect = e.currentTarget.getBoundingClientRect();
+
+      if (containerRect) {
+        setHoverInfo({
+          block,
+          pos: {
+            // スクロールコンテナの左端からの相対X座標 + 要素の半分の幅
+            x: targetRect.left - containerRect.left + targetRect.width / 2 + 64, // 64px is ml-16 offset adjustment
+            y: targetRect.top - containerRect.top,
+          },
+        });
+      }
+    } else {
+      setHoverInfo(null);
+    }
+  }, []);
+
+  // --- Scaling Logic ---
+  const maxObservedMB = useMemo(() => {
+    const currentDisplayHistory = history.slice(-HISTORY_SIZE);
     if (currentDisplayHistory.length === 0) return MAX_BLOCK_SIZE_MB_FLOOR;
     const max = Math.max(...currentDisplayHistory.map(b => b.blockSizeMB));
-
-    // 最小スケールフロア (5.0 MB) を設定し、スケールが小さくなりすぎないようにする
     return Math.max(MAX_BLOCK_SIZE_MB_FLOOR, max);
-  }, [history]); // [MODIFIED] 依存配列を 'history' に修正
+  }, [history]);
 
   const scaleMax = maxObservedMB;
   const scaleHalf = scaleMax / 2;
@@ -246,10 +334,9 @@ const ChainLane: React.FC<{
       </div>
 
       {/* --- 右側流動エリア (スパークライン) --- */}
-      <div className="flex-1 relative h-full bg-slate-100/50">
-        {/* 1. 背景グリッド線と補助数値 (固定表示) - 動的スケールを適用 */}
+      <div className="flex-1 relative h-full bg-slate-100/50 group/lane">
+        {/* 背景グリッド線と補助数値 */}
         <div className="absolute inset-0 pointer-events-none z-0 mb-5">
-          {/* Max Line (100% - ScaleMax MB) */}
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-400/60"
             style={{ bottom: '106px' }}
@@ -261,7 +348,6 @@ const ChainLane: React.FC<{
             {scaleMax.toFixed(1)} MB
           </span>
 
-          {/* Half Line (50% - ScaleHalf MB) */}
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-300/70"
             style={{ bottom: '61px' }}
@@ -273,7 +359,6 @@ const ChainLane: React.FC<{
             {scaleHalf.toFixed(1)} MB
           </span>
 
-          {/* [MODIFIED] Quarter Line (25% - ScaleQuarter MB) */}
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-300/50"
             style={{ bottom: '38px' }}
@@ -285,34 +370,40 @@ const ChainLane: React.FC<{
             {scaleQuarter.toFixed(1)} MB
           </span>
 
-          {/* Zero Line (0 MB) */}
           <div className="absolute left-0 right-0 border-t border-slate-300 bottom-3"></div>
           <span className="absolute bottom-1 left-2 text-[10px] font-bold font-mono text-slate-500 bg-white px-1.5 rounded border border-slate-200">
             0 MB
           </span>
         </div>
 
-        {/* 2. スクロール可能なバーエリア */}
-        {/* [MODIFIED] bottomを調整して表示領域を全体的に上にシフトし、pb-8を追加してX軸ラベルのスペースを確保 */}
-        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end ml-16 custom-scrollbar z-10">
-          <div className="flex items-end h-full justify-start pr-32 pb-8">
+        {/* スクロール可能なバーエリア */}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-x-auto overflow-y-hidden ml-16 custom-scrollbar z-10"
+        >
+          <div className="flex items-end h-full min-w-full justify-start pb-8">
             {displayHistory.map(block => (
-              // [MODIFIED] maxScaleを渡す
               <BlockBar
                 key={block.height}
                 block={block}
                 onClick={openTxModal}
                 maxScale={scaleMax}
+                onHover={handleBarHover}
               />
             ))}
 
-            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-1 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
+            <div className="h-full w-px bg-indigo-400/60 ml-1 mr-100 flex-shrink-0 border-r border-dashed border-indigo-400 relative">
               <div className="absolute bottom-[110px] -left-0 text-[9px] text-indigo-600 font-extrabold rotate-90 origin-bottom-left whitespace-nowrap tracking-wider">
                 CURRENT HEAD
               </div>
             </div>
+            <div className="w-[50px] h-full bg-transparent"></div>
           </div>
         </div>
+
+        {/* Tooltip Overlay */}
+        {hoverInfo && <HoverTooltip block={hoverInfo.block} position={hoverInfo.pos} />}
       </div>
     </div>
   );
@@ -335,11 +426,7 @@ export const BlockFeed: React.FC = () => {
         newBlocks.forEach(block => {
           const chainName = block.chainName;
           const currentHistory = next.get(chainName) || [];
-
-          // 同じ高さのブロックは追加しない (重複防止)
           if (currentHistory.some(b => b.height === block.height)) return;
-
-          // 新しいブロックを履歴に追加
           const updatedHistory = [...currentHistory, block];
           next.set(chainName, updatedHistory);
         });
@@ -349,7 +436,6 @@ export const BlockFeed: React.FC = () => {
     }
   });
 
-  // レーン表示順序の決定とフィルタリング
   const orderedChains = useMemo(() => {
     const allChains = Array.from(blockHistory.keys())
       .map(name => {
@@ -436,7 +522,6 @@ export const BlockFeed: React.FC = () => {
         <ModalHeader
           title={`Block Detail: ${txModal?.chainName} #${txModal?.height}`}
           subTitle={`Proposer: ${txModal?.proposer.label}`}
-          // BlockSizeMBが0.5MB以上ならWarningにする
           icon={txModal && txModal.blockSizeMB > 0.5 ? AlertTriangle : CheckCircle}
           iconColor={txModal && txModal.blockSizeMB > 0.5 ? 'text-amber-600' : 'text-emerald-600'}
           onClose={closeTxModal}
