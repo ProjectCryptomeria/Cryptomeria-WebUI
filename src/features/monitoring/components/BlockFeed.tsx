@@ -24,7 +24,7 @@ const HISTORY_SIZE = 40; // 履歴を20から40に倍増
 const MAX_BAR_HEIGHT = 90;
 
 // [NEW] スケールの最小フロア値 (MB) - 視覚的な最低基準 (この値以下にはスケールダウンしない)
-const MAX_BLOCK_SIZE_MB_FLOOR = 5.0;
+const MAX_BLOCK_SIZE_MB_FLOOR = 1.0;
 
 // チェーンごとのブロック履歴 (Map<chainName, BlockEvent[]>)
 type BlockHistoryMap = Map<string, BlockEvent[]>;
@@ -86,7 +86,7 @@ const BlockBar: React.FC<{
   } else if (blockSize > 0.01) {
     colorClass = 'bg-indigo-600 hover:bg-indigo-700'; // わずかなデータ
   } else {
-    colorClass = 'bg-emerald-400/60 hover:bg-emerald-500/60'; // 最小/空ブロック
+    colorClass = 'bg-emerald-400/80 hover:bg-emerald-500/80'; // 最小/空ブロック
   }
 
   return (
@@ -94,10 +94,12 @@ const BlockBar: React.FC<{
       onClick={() => onClick(block)}
       title={`Height: ${block.height}, Size: ${blockSize.toFixed(3)} MB, Txs: ${block.txCount}`}
       // [MODIFIED] w-8に拡大、title属性削除
-      className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group h-full pb-0 relative`}
+      // [MODIFIED] h-fullを削除。これがあったせいで、バーのデザインと実際の高さが合わなかった
+      className={`w-8 flex-shrink-0 flex items-end justify-center cursor-pointer transition-all duration-100 group pb-0 relative`}
     >
       {/* HEIGHTの簡略表示 (バーの上に表示) */}
-      <div className="absolute bottom-full mb-1 text-[8px] font-mono font-bold text-slate-500 group-hover:text-slate-800 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap">
+      {/* [MODIFIED] textのフォントサイズと色を調整。h-fullを調整することで表示されるようになった */}
+      <div className="absolute bottom-full mb-1 text-[14px] font-mono font-bold group-hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap">
         #{block.height % 1000}
       </div>
       <div
@@ -278,8 +280,9 @@ const ChainLane: React.FC<{
         </div>
 
         {/* 2. スクロール可能なバーエリア */}
-        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-3 custom-scrollbar z-10">
-          <div className="flex items-end h-full justify-start pl-16 pr-8">
+        {/* [MODIFIED] bottomを調整して表示領域を全体的に上にシフト */}
+        <div className="absolute inset-0 overflow-x-auto overflow-y-hidden flex items-end pb-2 ml-16 custom-scrollbar z-10">
+          <div className="flex items-end h-full justify-start pr-32">
             {displayHistory.map(block => (
               // [MODIFIED] maxScaleを渡す
               <BlockBar
@@ -355,10 +358,7 @@ export const BlockFeed: React.FC = () => {
   }, [blockHistory, filter]);
 
   const openTxModal = useCallback((block: BlockEvent) => {
-    // BlockSizeMBが0.01MB以上なら開くように変更
-    if (block.blockSizeMB > 0.01) {
-      setTxModal(block);
-    }
+    setTxModal(block);
   }, []);
 
   const closeTxModal = () => setTxModal(null);
