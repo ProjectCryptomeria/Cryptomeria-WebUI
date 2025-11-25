@@ -284,7 +284,7 @@ const ChainLane: React.FC<{
     <div
       className={`flex h-40 border-b border-dashed border-slate-300 items-center transition-colors duration-300 group ${getTypeColor(type)}`}
     >
-      {/* --- 左側固定エリア --- */}
+      {/* --- ステータスエリア（左側・固定） --- */}
       <div className="w-80 flex-shrink-0 p-4 border-r border-slate-300 flex flex-col justify-between h-full bg-white/80 backdrop-blur-sm z-20">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 shadow-sm border border-slate-200">
@@ -333,9 +333,9 @@ const ChainLane: React.FC<{
         </div>
       </div>
 
-      {/* --- 右側流動エリア (スパークライン) --- */}
+      {/* --- グラフエリア --- */}
       <div className="flex-1 relative h-full bg-slate-100/50 group/lane">
-        {/* 背景グリッド線と補助数値 */}
+        {/* --- グラフスケールエリア（背景グリッド線と補助数値・固定） --- */}
         <div className="absolute inset-0 pointer-events-none z-0 mb-5">
           <div
             className="absolute left-0 right-0 border-t border-dashed border-slate-400/60"
@@ -376,10 +376,11 @@ const ChainLane: React.FC<{
           </span>
         </div>
 
-        {/* スクロール可能なバーエリア */}
+        {/* --- グラフビューエリア（棒グラフ・スクロール） --- */}
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
+          // 表示がスケールと被らないようにml-16を設定して左に余白。
           className="absolute inset-0 overflow-x-auto overflow-y-hidden ml-16 custom-scrollbar z-10"
         >
           <div className="flex items-end h-full min-w-full justify-start pb-8">
