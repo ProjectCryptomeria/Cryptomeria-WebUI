@@ -109,9 +109,7 @@ const BlockBar: React.FC<{
             isInterval
               ? 'text-slate-400 opacity-100' // 間引き対象: 常時薄く表示
               : 'text-slate-600 opacity-0' // その他: 通常非表示
-          }
-          group-hover:text-indigo-600 group-hover:bg-white group-hover:shadow-sm group-hover:z-20
-        `}
+          }`}
       >
         {/* 下3桁だけ表示 */}
         {block.height}
