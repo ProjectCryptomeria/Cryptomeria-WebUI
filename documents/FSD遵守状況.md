@@ -1,38 +1,42 @@
 ## 2. 🗂️ 各レイヤーの FSD 遵守状況
 
-現在のファイル構造とインポート方法を、作成された FSD ルール書と照らし合わせ、各レイヤーが原則にどの程度従っているかを分析しました。
+現在のコードベース（`src/`）を分析し、FSDルールに対する遵守状況を確認しました。全体として、**一方向の依存関係**と**責務の分離**が非常に高いレベルで維持されています。
 
-全体として、このリポジトリは FSD の**一方向の依存関係の原則**（上位 → 下位）を非常に高いレベルで遵守しています。ごく一部の例外は、Zustand のグローバルな状態管理やアプリケーションの初期化といった、**FSDでも一般的に許容される実用的な例外**に留まっています。
+### 💻 App (アプリケーション)
 
-### 💻 App (アプリケーション) の遵守状況
+- **遵守状況**: ✅ 遵守
+- **詳細**: `src/app/index.tsx` は、`MainLayout` (`Widgets`) を使用し、ルーティング（状態による画面切り替え）とグローバルなデータロード (`loadData`)、および全画面共通のWebSocketリスナー（BlockFeedのバックグラウンド受信など）の管理に集中しています。
 
-- **責務の遵守**: 完全に遵守しています。`src/app/index.tsx`は、`MainLayout`を使用して`pages`を切り替え、`useWebSocket`でグローバルなイベント（Base Feeや実行進捗）を購読し、`useGlobalStore`の`loadData`を呼び出すなど、**グローバルなオーケストレーション**に特化しています。
-- **依存関係の遵守**: 概ね遵守していますが、以下の通り、**グローバルな連携のため**に下位レイヤーに直接依存しています。
-  - **OK**: `widgets` (`MainLayout`, `LogModal`)、`pages` (`MonitoringPage`など) への依存は階層的に正しいです。
-  - **許容される例外**: `shared/lib/hooks/useWebSocket`や`shared/store`、`entities/*`の型定義を直接インポートしていますが、これはアプリケーションの最上位層としてグローバルな状態やイベントリスナーをセットアップする上で**必要かつ一般的なFSDの適応**です。
+### 📄 Pages (ページ)
 
-### 📄 Pages (ページ) の遵守状況
+- **遵守状況**: ✅ 遵守
+- **詳細**: `monitoring/index.tsx` や `experiment/index.tsx` などは、自ら複雑な状態管理を行わず、`Features`層のコンポーネント（`TopologyGraph`, `ExperimentConfigForm`）やHooksを配置するコンテナとして機能しています。
 
-- **責務の遵守**: 完全に遵守しています。すべてのページ (`ExperimentPage`、`DeploymentPage`、`LibraryPage`など) は、`PageHeader`、`Card`、`Modal`といった`Shared/UI`や、`useExperimentConfig`、`useTableFilterSort`といった`Features`層のHooksを使用する**組み立て役**に徹しており、独自の複雑なビジネスロジックは含んでいません。
-- **依存関係の遵守**: 完全に遵守しています。`Pages`層は、`Features`、`Entities`、`Widgets`、`Shared`の各下位レイヤーのみに依存しており、上位レイヤー（`App`）や同階層に不適切に依存する例は見られません。
+### 🧩 Widgets (ウィジェット)
 
-### 🧩 Widgets (ウィジェット) の遵守状況
+- **遵守状況**: ✅ 遵守
+- **詳細**: `widgets/layout` は画面の骨格を提供し、`widgets/log-modal` は複数の画面から呼び出される共通のモーダルUIを提供しています。これらは特定のページに依存していません。
 
-- **責務の遵守**: 完全に遵守しています。`widgets/layout/*`はレイアウト骨格を、`widgets/log-modal/*`はグローバルなモーダル機能を担っており、責務が明確です。
-- **依存関係の遵守**: 完全に遵守しています。`Header.tsx`は`shared/store`からグローバルな状態（`execution`, `users`）を取得し、`Sidebar.tsx`も同様に`useGlobalStore`からデータを取得していますが、これは下位レイヤーへの依存であり原則に従っています。
+### ✨ Features (フィーチャー)
 
-### ✨ Features (フィーチャー) の遵守状況
+- **遵守状況**: ✅ 遵守
+- **詳細**: 各機能が適切にモジュール化されています。
+  - **Monitoring**: 以前は表示のみでしたが、現在は `src/features/monitoring/models/store.ts` (`createMonitoringSlice`) を持ち、ブロック履歴の管理ロジックを内包しています。これはFSDにおいて正しい進化です。
+  - **Experiment**: シナリオ生成の複雑なロジックは `features/experiment` 内に閉じ込められています。
+  - **Preset**: 独立したFeatureとしてUIとロジックを持っています。
 
-- **責務の遵守**: 完全に遵守しています。ロジックは Hooks (`useExperimentConfig`, `useDeploymentControl`) や Store Slice (`createExecutionSlice`) に明確にカプセル化されています。
-- **依存関係の遵守**: 完全に遵守しています。すべてのフィーチャーロジックは、`Entities`（例: `entities/scenario`）および`Shared`（例: `shared/api`, `shared/store`）にのみ依存しており、上位レイヤーへの逆依存はありません。
+### 🧬 Entities (エンティティ)
 
-### 🧬 Entities (エンティティ) の遵守状況
+- **遵守状況**: ✅ 遵守
+- **詳細**: `account`, `node`, `scenario` など、ドメインモデルごとにディレクトリが分かれています。`models/store.ts` には純粋なCRUD操作やデータ保持のみが記述されており、ビジネスロジック（実験の実行フローなど）は混入していません。
 
-- **責務の遵守**: 完全に遵守しています。`Entities`層の Store Slice (`createEconomySlice`, `createLibrarySlice`など) は、アカウントの作成/削除や結果の登録といった**単純な CRUD 操作**に限定されており、複雑なビジネスロジック（例: シナリオの生成アルゴリズム）は含まれていません。
-- **依存関係の遵守**: 完全に遵守しています。Entity の各 Slice は、API クライアント (`shared/api`) やグローバルストアの型定義 (`shared/store/types`) といった**`Shared`層にのみ**依存しています。
+### ⚙️ Shared (共有)
 
-### ⚙️ Shared (共有) の遵守状況
+- **遵守状況**: ✅ 遵守（許容された例外を含む）
+- **詳細**:
+  - UIコンポーネント (`Button`, `Card`) や Hooks (`useWebSocket`) は完全に独立しており、高い再利用性を持ちます。
+  - **例外**: `src/shared/store/index.ts` は、Zustandの仕様上、`features` や `entities` のスライスをインポートして結合しています。これはFSDにおける「App層またはShared層でのStore集約」として許容されるパターンです。
 
-- **責務の遵守**: 完全に遵守しています。`ui`、`lib`、`api`、`config`、`types`といった汎用的な要素に分割されており、それぞれのモジュールが独立しています。
-- **依存関係の遵守**: 完全に遵守しています。`Shared`層は他のどのアプリケーション層にも依存しておらず、外部ライブラリ（`react`, `lucide-react`など）または自身のサブモジュールにのみ依存しています。
-  - **許容される例外**: `src/shared/store/index.ts`では、アプリケーションの起動時に全スライスをまとめるために`entities/*`と`features/*`の Slice 関数をインポートしていますが、これは Zustand を用いた FSD における**グローバルストア構成上の必然的な例外**であり、ロジック自体が逆依存しているわけではありません。
+### 総合評価
+
+リポジトリはFSDの原則に厳格に従って構成されており、スケーラビリティと保守性が高い状態です。特に、MSWを用いたモックサーバーロジックが `shared/mocks` に分離されているため、将来的なバックエンド接続の実装時にも、UI側の変更を最小限に抑えられる構造になっています。

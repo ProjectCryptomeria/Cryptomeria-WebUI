@@ -1,81 +1,63 @@
-ご提示いただいた仕様書とリポジトリの分析結果に基づき、開発者や研究者がこのプロジェクトの価値を即座に理解し、利用を開始できるように構成した`README.md`案を作成しました。
-
-プロジェクトの「究極の目的」である「脱CLI・GUIによる直感的な操作」を強調しつつ、各機能の技術的な裏付けも記載しています。
-
----
-
 # 🌌 RaidChain WebUI
 
 **RaidChain WebUI**は、Cosmos SDKベースのモジュラーブロックチェーンシステム「**RaidChain**」の研究開発、実験、および運用を効率化するための統合管理コンソールです。
 
-これまで`Ignite CLI`, `kubectl`, `shell script`, `justfile`を駆使して行われていた複雑なチェーン操作を、モダンなWebインターフェースに集約。ブロックチェーンのデプロイから、複雑なデータ転送実験のシナリオ作成、リアルタイムモニタリングまでをGUI完結させることを目的としています。
+これまで`Ignite CLI`, `kubectl`, `shell script`を駆使して行われていた複雑なチェーン操作を、Feature Sliced Design (FSD) に基づくモダンなWebインターフェースに集約。ブロックチェーンのデプロイから、複雑なデータ転送実験のシナリオ作成、リアルタイムモニタリングまでをGUI完結させることを目的としています。
+
+> **Note**: 現在、本プロジェクトは **MSW (Mock Service Worker)** を用いた完全なブラウザ内シミュレーションモードで動作します。バックエンドを用意することなく、すべての機能を体験・開発することが可能です。
 
 ## 📖 概要
 
-RaidChainは、Internet Computerのような「フルオンチェーンWeb」をCosmosエコシステム上で再現する野心的なプロジェクトです。WebUIは、このシステムの以下の4つのコンポーネントをオーケストレーションします。
+RaidChain WebUIは、以下のコンポーネント群をオーケストレーションします。
 
 1.  **Controlchain**: 統合管理ロジック
 2.  **Metachain**: メタデータ管理
-3.  **Datachain**: データ保存（負荷分散のため複数稼働・スケーリング可能）
-4.  **Relayer**: IBC通信
+3.  **Datachain**: データ保存（負荷分散・スケーリング可能）
 
-本UIは、Kubernetes上のコンテナ操作やDockerイメージのビルドプロセスを抽象化し、研究者が「インフラ管理」ではなく「ブロックチェーンの挙動実験」に集中できる環境を提供します。
+インフラ管理の複雑さを抽象化し、研究者が「実験シナリオの策定」と「結果の分析」に集中できる環境を提供します。
 
 ## ✨ 主な機能 (Features)
 
-### 1\. 🖥️ ネットワークモニタリング (Network Monitoring)
+### 1. 🖥️ ネットワークモニタリング (Monitoring)
 
-RaidChainエコシステム全体の稼働状況を可視化します。
+- **Block Feed**: Control/Meta/Data 全チェーンのブロック生成をリアルタイムにタイムライン表示。トランザクションの詳細確認も可能。
+- **Topology Graph**: ノード間の接続とIBCパケットの流れをSVGアニメーションで可視化。
+- **Mempool**: 各ノードの未処理トランザクション滞留状況を監視。
 
-- **トポロジーグラフ**: ノード間の接続とIBCパケットの流れをアニメーション表示。
-- **ノードステータス**: 各チェーン（Control/Meta/Data）のブロック高、レイテンシ、Active/Inactive状態を監視。
-- **Mempool & Base Fee**: トランザクションの滞留状況や手数料推移をリアルタイムグラフで確認。
+### 2. 🧪 実験シナリオビルダー (Experiment)
 
-### 2\. 🚀 デプロイメント制御 (Deployment & Scaling)
+- **多重シナリオ生成**: データサイズやチャンクサイズを「範囲（Range）」で指定し、数百パターンの実験条件を一括生成。
+- **Chain Selector**: 対象チェーンをGUIで選択、またはステップ実行の設定が可能。
+- **File Tree Viewer**: アップロードされたZip/フォルダ構造を解析・可視化し、実験データとして利用。
+- **コスト試算**: 実験実行前に必要なガスコストを自動計算し、ウォレット残高と照合。
 
-煩雑な`kubectl`や`helm`操作を不要にします。
+### 3. 🚀 デプロイメント制御 (Deployment)
 
-- **GUIビルド**: ターゲットコンポーネントを選択し、Dockerイメージのビルドをワンクリックで開始。ビルドログはリアルタイムでストリーミングされます。
-- **オートスケーリング**: スライダー操作のみでDatachainノード数（例: 1〜10）を増減させ、`Helm Upgrade`を裏側で実行します。
-- **環境リセット**: ワンクリックでPVC（永続ボリューム）を含む全データを破棄し、クリーンな環境を再構築。
+- **GUIビルド**: コンポーネントを選択し、Dockerイメージビルドをワンクリックで開始。ログはターミナル風UIでリアルタイム表示。
+- **オートスケーリング**: スライダー操作でDatachainノード数を動的に増減（シミュレーション）。
+- **環境リセット**: ワンクリックで全データを破棄し、クリーンな環境を再構築。
 
-### 3\. 🧪 実験シナリオビルダー (Experiment Scenarios)
+### 4. 💰 エコノミー & アカウント管理 (Economy)
 
-[Image of flowchart for scientific experiment process]
-
-研究開発のための複雑なデータ転送実験を自動化します。
-
-- **多重シナリオ生成**: データサイズやチャンクサイズを「範囲（Range）」で指定し、複数の実験条件を組み合わせたシナリオを一括生成。
-- **戦略セレクター**: Allocator（保存先割り当てロジック）やTransmitter（転送方式）のアルゴリズムをGUIで切り替え。
-- **コスト試算**: 実験実行前に必要なガスコストを自動計算し、ウォレット残高との照合を行います。
-
-### 4\. 💰 エコノミー & アカウント管理 (Economy)
-
-- **Webウォレット**: シェルスクリプトでの鍵管理を廃止。ブラウザ上でアカウントを作成・保存し、チェーンに登録。
+- **Webウォレット**: アカウント作成、残高確認、秘密鍵の表示（セキュリティ保護付き）。
 - **Faucet**: 開発用トークンをワンタップで補充。
-- **Watchdog**: リレーヤー（Relayer）の残高を監視し、枯渇しそうな場合に自動でFaucetを実行してIBCの停止を防ぎます。
+- **Watchdog**: リレーヤー等のシステムアカウント残高を監視し、自動補充を実行。
 
-### 5\. 📚 ライブラリ & 分析 (Library)
+### 5. 📚 ライブラリ & プリセット (Library & Preset)
 
-- **実験ログ**: 過去の実験結果を自動でDB（IndexedDB/LocalStorage）に保存。
-- **データエクスポート**: 実験結果、スループット、レイテンシなどのメトリクスをCSV/JSON形式で出力し、論文作成や分析に活用可能。
+- **結果分析**: 実験結果のスループット、レイテンシ、経済コストを表形式で確認・フィルタリング。詳細データをCSV/JSONでエクスポート。
+- **プリセット管理**: 頻繁に使用する実験設定をテンプレートとして保存・共有。
 
 ## 🛠️ 技術スタック (Tech Stack)
 
-本プロジェクトは、パフォーマンスと開発体験を重視したモダンなスタックで構成されています。
-
-- **Core**: React 18, TypeScript, Vite
-- **State Management**: Zustand (Global Store), React Context
-- **Styling**: Tailwind CSS
-- **API Simulation**: MSW (Mock Service Worker) - バックエンド未接続時でも完全な動作検証が可能
-- **Visualization**: Recharts (グラフ), Custom SVG Components (トポロジー)
+- **Core**: React 19, TypeScript, Vite
+- **State Management**: Zustand 5 (Global Store)
+- **Architecture**: Feature Sliced Design (FSD)
+- **Simulation**: MSW 2.0 (Mock Service Worker) - Browser Worker
+- **UI/Styling**: Tailwind CSS, Lucide React, Recharts
+- **Validation**: Zod
 
 ## ⚡ 開始方法 (Getting Started)
-
-### 前提条件
-
-- Node.js (v18以上推奨)
-- Yarn
 
 ### インストール & 起動
 
@@ -87,34 +69,26 @@ cd raidchain-webui
 yarn install
 ```
 
-開発サーバーを起動します。現在はMSW（Mock Service Worker）が有効化されており、バックエンドのRaidChainノードが起動していない状態でも、ブラウザ上で全てのUI機能を体験・開発することができます。
+開発サーバーを起動します。
 
 ```bash
 yarn dev
 ```
 
-ブラウザで `http://localhost:3000` にアクセスしてください。
+ブラウザで `http://localhost:3000` にアクセスしてください。MSWが起動し、自動的にシミュレーション環境がセットアップされます。
 
-## 📂 ディレクトリ構成
+## 📂 ディレクトリ構成 (FSD)
 
 ```
 src/
-├── app/            # アプリケーションのエントリーポイントとルーティング
-├── entities/       # ドメインモデル (Account, Node, Result, Scenario...)
-├── features/       # ユースケース機能 (DeploymentControl, ExperimentConfig...)
-├── pages/          # 各ページコンポーネント (Monitoring, Deployment, Experiment...)
-├── shared/         # 共有ロジック, UIコンポーネント, 定数, Mock定義
+├── app/            # アプリケーションエントリー, Global Setup
+├── entities/       # ドメインモデル (Account, Node, Scenario...)
+├── features/       # ユースケースロジック (Experiment, Monitoring, Preset...)
+├── pages/          # ページレイアウト (MonitoringPage, ExperimentPage...)
+├── shared/         # 共有UI, Hooks, Mock, APIクライアント
 └── widgets/        # 複合UIコンポーネント (Sidebar, Header, Layout)
 ```
 
-## 🤝 コントリビューション
-
-現在のフェーズは「従来のCLI環境からの完全移行」を目指したリファクタリング段階です。
-特に以下の領域での貢献を歓迎します。
-
-1.  **API Integration**: 現在Mockで動作している部分の、実際のGo製バックエンド/Kubernetes APIへの接続実装。
-2.  **Scenario Expansion**: 新しい実験戦略（Allocator/Transmitter）のUIサポート追加。
-
 ## 📜 License
 
-[License Name] - Copyright (c) 2025 RaidChain Project
+Copyright (c) 2025 RaidChain Project
