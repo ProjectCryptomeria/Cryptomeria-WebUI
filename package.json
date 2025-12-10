@@ -47,10 +47,10 @@
     "vite": "^6.2.0",
     "vitest": "^4.0.13"
   },
-  "packageManager": "yarn@4.12.0",
   "msw": {
     "workerDirectory": [
       ""
     ]
-  }
+  },
+  "packageManager": "yarn@4.12.0"
 }
